@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 160" role="img" aria-label="Empat keping puzzle berwarna">
+<circle cx="90" cy="80" r="73" fill="#ffffff" opacity=".48"/>
+<path d="M35 35h38v14c0 5 4 8 9 8s9-3 9-8V35h38v39h-13c-5 0-8 4-8 9s3 9 8 9h13v35H91v-13c0-5-4-8-9-8s-9 3-9 8v13H35V92h13c5 0 8-4 8-9s-3-9-8-9H35z" fill="#8b83ec" stroke="#4e4ab0" stroke-width="6" stroke-linejoin="round"/>
+<path d="M35 35h38v14c0 5 4 8 9 8s9-3 9-8V35h38v39h-13c-5 0-8 4-8 9s3 9 8 9h13v35H91v-13c0-5-4-8-9-8s-9 3-9 8v13H35V92h13c5 0 8-4 8-9s-3-9-8-9H35z" fill="none" stroke="#4e4ab0" stroke-width="6"/>
+<path d="M35 35h38v14c0 5 4 8 9 8s9-3 9-8V35h38v39h-13c-5 0-8 4-8 9s3 9 8 9h13v35H91v-13c0-5-4-8-9-8s-9 3-9 8v13H35V92h13c5 0 8-4 8-9s-3-9-8-9H35z" fill="#ffcb63" clip-path="inset(0 50% 50% 0)"/>
+<path d="M35 35h38v14c0 5 4 8 9 8s9-3 9-8V35h38v39h-13c-5 0-8 4-8 9s3 9 8 9h13v35H91v-13c0-5-4-8-9-8s-9 3-9 8v13H35V92h13c5 0 8-4 8-9s-3-9-8-9H35z" fill="#79d7c1" clip-path="inset(50% 0 0 50%)"/>
+</svg>

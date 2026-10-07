@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 250" role="img" aria-label="Maskot kertas iklan memegang kaca pembesar">
+<circle cx="127" cy="124" r="104" fill="#ffffff" opacity=".42"/>
+<path d="M24 45l9-22 9 22 22 9-22 9-9 22-9-22-22-9zm193 5 6-15 6 15 15 6-15 6-6 15-6-15-15-6z" fill="#ffca45"/>
+<circle cx="213" cy="191" r="11" fill="#fb7284"/>
+<circle cx="50" cy="185" r="7" fill="#8b7dea"/>
+<path d="M65 76q0-15 15-15h99q15 0 15 15v124q0 15-15 15H80q-15 0-15-15z" fill="#3154b9" opacity=".16" transform="translate(6 8)"/>
+<path d="M65 76q0-15 15-15h99q15 0 15 15v124q0 15-15 15H80q-15 0-15-15z" fill="#fffdfa" stroke="#3154b9" stroke-width="7"/>
+<path d="M87 86h58" stroke="#63c9c1" stroke-width="12" stroke-linecap="round"/>
+<path d="M87 106h79" stroke="#ffd16f" stroke-width="9" stroke-linecap="round"/>
+<path d="M87 122h55" stroke="#ffd16f" stroke-width="9" stroke-linecap="round"/>
+<circle cx="104" cy="151" r="5" fill="#243469"/><circle cx="155" cy="151" r="5" fill="#243469"/>
+<path d="M112 171q17 18 35 0" fill="none" stroke="#243469" stroke-width="5" stroke-linecap="round"/>
+<circle cx="87" cy="165" r="8" fill="#ffb1aa" opacity=".8"/><circle cx="172" cy="165" r="8" fill="#ffb1aa" opacity=".8"/>
+<path d="M64 164q-21-8-24 17" fill="none" stroke="#3154b9" stroke-width="8" stroke-linecap="round"/>
+<path d="M194 159q20 2 23 19" fill="none" stroke="#3154b9" stroke-width="8" stroke-linecap="round"/>
+<circle cx="214" cy="188" r="26" fill="#ffffff" fill-opacity=".7" stroke="#3154b9" stroke-width="7"/>
+<path d="M231 208l18 21" stroke="#3154b9" stroke-width="9" stroke-linecap="round"/>
+<path d="M94 215v18m70-18v18" stroke="#3154b9" stroke-width="8" stroke-linecap="round"/>
+</svg>

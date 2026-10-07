@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 160" role="img" aria-label="Buku terbuka dan pensil">
+<circle cx="90" cy="80" r="72" fill="#ffffff" opacity=".48"/>
+<path d="M21 40q31-12 67 4v83q-36-16-67-4z" fill="#fffdf8" stroke="#4b5bc3" stroke-width="6" stroke-linejoin="round"/>
+<path d="M88 44q35-16 71-4v83q-36-12-71 4z" fill="#fffdf8" stroke="#4b5bc3" stroke-width="6" stroke-linejoin="round"/>
+<path d="M88 44v83" stroke="#4b5bc3" stroke-width="6"/>
+<path d="M37 61h32m-32 18h37m-37 18h25m45-36h33m-33 18h29m-29 18h35" stroke="#8ccfc7" stroke-width="6" stroke-linecap="round"/>
+<path d="M125 25l17-17 23 23-17 17z" fill="#ffc94d" stroke="#dd724e" stroke-width="4"/>
+<path d="M125 25l23 23-32 28z" fill="#ffc94d" stroke="#dd724e" stroke-width="4"/>
+<path d="M116 76l7-18 11 11z" fill="#5b4b4b"/>
+</svg>

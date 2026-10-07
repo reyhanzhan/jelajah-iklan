@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#123f4d"/><stop offset="1" stop-color="#16624f"/></linearGradient><radialGradient id="sun"><stop stop-color="#f7df78"/><stop offset="1" stop-color="#eab349"/></radialGradient></defs>
+<rect width="600" height="600" fill="url(#bg)"/>
+<circle cx="502" cy="95" r="160" fill="#ffffff" opacity=".055"/><circle cx="105" cy="520" r="150" fill="#ffffff" opacity=".055"/>
+<text x="300" y="78" fill="#fff8df" font-family="Arial,sans-serif" font-size="48" font-weight="900" text-anchor="middle">HEMAT ENERGI</text>
+<text x="300" y="118" fill="#f5ca69" font-family="Arial,sans-serif" font-size="27" font-weight="800" text-anchor="middle">SELAMATKAN BUMI!</text>
+<circle cx="300" cy="292" r="143" fill="#e6f1cc"/>
+<circle cx="300" cy="292" r="126" fill="#79beac"/>
+<path d="M194 247q40-45 92-40l-17 24 24 14-24 21-30-5-12 32-32-6zm92 77 37-9 28 23-5 39-21 28-39-8-13-38zm80-96 42 32-10 43-31 2-22-35z" fill="#3f8c6b"/>
+<circle cx="300" cy="292" r="126" fill="none" stroke="#d7ead4" stroke-width="10"/>
+<path d="M287 179v72" stroke="#fff9d5" stroke-width="19" stroke-linecap="round"/>
+<path d="M258 226a54 54 0 1 0 85 0" fill="none" stroke="#fff9d5" stroke-width="18" stroke-linecap="round"/>
+<path d="M110 209l13-30 13 30 30 13-30 13-13 30-13-30-30-13zm376 177 9-20 9 20 20 9-20 9-9 20-9-20-20-9z" fill="#f2c75c"/>
+<rect x="54" y="465" width="492" height="93" rx="22" fill="#f5edcc"/>
+<text x="300" y="499" fill="#164d40" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle">Matikan lampu saat tidak digunakan.</text>
+<text x="300" y="529" fill="#164d40" font-family="Arial,sans-serif" font-size="20" font-weight="700" text-anchor="middle">Ayo, gunakan energi secara bijak!</text>
+</svg>

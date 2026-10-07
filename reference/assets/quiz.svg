@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 160" role="img" aria-label="Lembar soal dengan tanda centang">
+<circle cx="90" cy="80" r="72" fill="#ffffff" opacity=".48"/>
+<rect x="42" y="23" width="94" height="121" rx="13" fill="#fffdfa" stroke="#dd667a" stroke-width="6"/>
+<rect x="64" y="15" width="50" height="20" rx="8" fill="#ffc85d" stroke="#dd667a" stroke-width="5"/>
+<path d="M63 59h48m-48 20h38m-38 20h28" stroke="#b9c7d0" stroke-width="7" stroke-linecap="round"/>
+<circle cx="116" cy="106" r="27" fill="#79d7ba" stroke="#299179" stroke-width="5"/>
+<path d="M102 105l10 10 19-22" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M145 38l4-10 4 10 10 4-10 4-4 10-4-10-10-4z" fill="#ffca45"/>
+</svg>

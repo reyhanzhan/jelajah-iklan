@@ -1,0 +1,95 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {JSDOM} from 'jsdom';
+import {build} from 'esbuild';
+
+const bundle=await build({entryPoints:['src/portal.js'],bundle:true,write:false,format:'esm',loader:{'.css':'empty'},define:{'import.meta.env.VITE_SUPABASE_URL':'""','import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY':'""'}});
+const portal=bundle.outputFiles[0].text;
+async function setup(){
+  const dom=new JSDOM(await fs.readFile('index.html','utf8'),{url:'http://localhost',runScripts:'dangerously',pretendToBeVisual:true});
+  const w=dom.window;
+  w.scrollTo=()=>{};
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  w.eval(await fs.readFile('public/game-data.js','utf8'));
+  w.eval(await fs.readFile('public/app.js','utf8'));
+  await w.eval(`(async()=>{${portal}})()`);
+  return {dom,w,d:w.document};
+}
+const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
+async function enter(d,role){d.querySelector('#openLogin').click();d.querySelector(`[data-demo="${role}"]`).click();await settle();}
+
+test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    assert.equal(d.querySelectorAll('.menu-card').length,4);
+    assert.match(d.querySelector('.hero').textContent,/detektif iklan/);
+    await enter(d,'murid');
+    assert.match(d.querySelector('main').textContent,/Halo, Murid Demo/);
+    d.querySelector('#startLearning').click();
+    assert(d.querySelector('#openDashboard'));
+    w.go('soal');
+    for(let i=0;i<25;i++){d.querySelectorAll('.option')[0].click();d.querySelector('.actions .primary').click();}
+    await settle();
+    assert.match(d.querySelector('main').textContent,/Hasil belajarmu/);
+    assert.match(d.querySelector('.save-status').textContent,/Hasil tersimpan/);
+    const saved=JSON.parse(w.localStorage.getItem('jelajah-demo-v1'));
+    assert.equal(saved.attempts.length,1);assert.equal(saved.attempts[0].total,25);
+    w.go('home');d.querySelector('#openDashboard').click();await settle();
+    d.querySelector('[data-tab="hasil"]').click();
+    assert.match(d.querySelector('#resultRows').textContent,/Soal-soal/);
+  }finally{dom.window.close();}
+});
+test('guru membuat kelas dan akun murid tanpa menyimpan kata sandi demo',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    await enter(d,'guru');d.querySelector('#newClass').click();
+    d.querySelector('[name="name"]').value='Kelas Uji';
+    d.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
+    assert.match(d.querySelector('main').textContent,/Kelas Uji/);
+    const buttons=d.querySelectorAll('[data-add]');buttons[buttons.length-1].click();
+    d.querySelector('[name="full_name"]').value='<script>alert(1)</script>';
+    d.querySelector('[name="email"]').value='uji@example.com';
+    d.querySelector('[name="password"]').value='test-password-only';
+    d.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
+    assert.match(d.querySelector('main').textContent,/<script>alert\(1\)<\/script>/);
+    assert.equal(d.querySelectorAll('main script').length,0);
+    assert(!w.localStorage.getItem('jelajah-demo-v1').includes('test-password-only'));
+  }finally{dom.window.close();}
+});
+test('admin melihat akun; keluar membersihkan sesi dan akses dasbor',async()=>{
+  const {dom,d}=await setup();
+  try{
+    await enter(d,'admin');d.querySelector('[data-tab="akun"]').click();
+    assert.equal(d.querySelectorAll('[data-role-user]').length,3);
+    assert(d.querySelector('[data-role-user="demo-admin"]').disabled);
+    d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
+    assert(d.querySelector('#openLogin'));assert(!d.querySelector('#openDashboard'));
+  }finally{dom.window.close();}
+});
+test('musik hidup/mati dan volume tersimpan, materi serta puzzle tetap bekerja',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    let starts=0,suspends=0;
+    w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}suspend(){suspends++;return Promise.resolve();}createGain(){return {gain:{value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}createOscillator(){return {frequency:{value:0},connect(){},disconnect(){},start(){starts++;},stop(){}};}};
+    d.querySelector('#settingsButton').click();
+    const toggle=d.querySelector('#musicToggle');toggle.checked=true;toggle.dispatchEvent(new w.Event('change'));await settle();
+    assert(starts>0);
+    const volume=d.querySelector('#volume');volume.value='60';volume.dispatchEvent(new w.Event('input'));
+    toggle.checked=false;toggle.dispatchEvent(new w.Event('change'));await settle();
+    assert(suspends>0);assert.deepEqual(JSON.parse(w.localStorage.getItem('jelajah-music')),{enabled:false,volume:0.6});
+    d.querySelector('.modal-head button').click();
+    await enter(d,'murid');d.querySelector('#startLearning').click();w.go('materi');
+    for(let i=0;i<7;i++)d.querySelector('.lesson-nav .primary').click();await settle();
+    assert.equal(JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts[0].activity,'materi');
+    w.go('puzzle');assert.equal(d.querySelectorAll('.puzzle-piece').length,9);
+    // Solve by swapping actual pieces from the DOM background position.
+    for(let target=0;target<9;target++){
+      const pieces=[...d.querySelectorAll('.puzzle-piece')];
+      const source=pieces.findIndex(p=>p.style.backgroundPosition===`${target%3*50}% ${Math.floor(target/3)*50}%`);
+      if(source!==target){pieces[target].click();d.querySelectorAll('.puzzle-piece')[source].click();}
+    }
+    assert.match(d.querySelector('#puzzleMessage').textContent,/Puzzle selesai/);
+  }finally{dom.window.close();}
+});

@@ -1,0 +1,3 @@
+[functions.create-account]
+# Pemeriksaan JWT platform ditambah verifikasi auth.getUser() di fungsi.
+verify_jwt = true

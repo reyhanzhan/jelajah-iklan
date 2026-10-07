@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f5ed">
+  <title>Jelajah Iklan</title>
+  <meta name="description" content="Belajar mengenal iklan lewat materi, game, puzzle, dan soal interaktif. Ruang belajar untuk murid, guru, dan admin.">
+  <link rel="icon" href="/mascot.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <button id="backButton" class="icon-button hidden" type="button" aria-label="Kembali ke menu">‹</button>
+      <div class="brand"><span class="brand-mark">✦</span><span>Jelajah Iklan</span></div>
+      <span id="topTag" class="top-tag">Belajar interaktif</span>
+      <button id="settingsButton" class="toolbar-button" type="button" aria-label="Pengaturan">⚙</button>
+    </header>
+    <main id="main" tabindex="-1"></main>
+  </div>
+  <div id="portal"></div>
+  <script src="game-data.js"></script>
+  <script src="app.js"></script>
+  <script type="module" src="/src/portal.js"></script>
+</body>
+</html>
