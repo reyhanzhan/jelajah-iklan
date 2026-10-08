@@ -7,7 +7,7 @@ const main = document.getElementById('main');
 const root = document.getElementById('portal');
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roles = {admin:'Admin',guru:'Guru',murid:'Murid'};
-const activities = {materi:'Materi',game:'Game',puzzle:'Puzzle',soal:'Soal-soal'};
+const activities = {materi:'Materi',game:'Pilah Iklan',puzzle:'Game',soal:'Pilihan Ganda'};
 let user = null, currentTab = 'kelas', data = null, renderId = 0;
 let latestSave = null;
 const pending = new Map();
@@ -165,7 +165,7 @@ function drawAccounts() {
   document.getElementById('newAccount').onclick=()=>accountDialog();
 }
 function drawResults() {
-  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Hasil belajar</h2><button class="secondary" id="refreshResults">↻ Perbarui</button></div><label class="muted" for="activityFilter">Kegiatan</label><select class="field" id="activityFilter"><option value="">Semua kegiatan</option>${Object.entries(activities).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><div id="resultRows"></div><p class="muted">Menampilkan hingga 500 hasil terbaru. Game, puzzle, dan materi adalah latihan. Nilai soal pada akun terhubung dihitung di server.</p></section>`;
+  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Hasil belajar</h2><button class="secondary" id="refreshResults">↻ Perbarui</button></div><label class="muted" for="activityFilter">Kegiatan</label><select class="field" id="activityFilter"><option value="">Semua kegiatan</option>${Object.entries(activities).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><div id="resultRows"></div><p class="muted">Menampilkan hingga 500 hasil terbaru. Pilah Iklan, Game, dan materi adalah latihan. Nilai soal pada akun terhubung dihitung di server.</p></section>`;
   const drawRows=(filter='')=>{
     const rows=data.attempts.filter(a=>!filter||a.activity===filter);
     document.getElementById('resultRows').innerHTML=rows.length?`<div class="table-wrap"><table><thead><tr>${user.role!=='murid'?'<th>Murid</th>':''}<th>Kegiatan</th><th>Hasil</th><th>Waktu</th></tr></thead><tbody>${rows.map(a=>`<tr>${user.role!=='murid'?`<td>${escape(data.profiles.find(p=>p.id===a.student_id)?.full_name||'Murid')}</td>`:''}<td>${activities[a.activity]}</td><td>${a.activity==='materi'?'Selesai':`<b>${Math.round(a.correct/a.total*100)}%</b> <small>(${a.correct}/${a.total})</small>`}</td><td>${new Date(a.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jakarta'})}</td></tr>`).join('')}</tbody></table></div>`:empty('Belum ada hasil belajar','Selesaikan kegiatan belajar untuk melihat hasilnya di sini.');

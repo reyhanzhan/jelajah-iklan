@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
+  <title id="title">Iklan Roti Ceria</title>
+  <desc id="desc">Roti Ceria. Hangat, lembut, bikin semangat. Beli 2, gratis 1! Pesan sekarang di toko terdekat!</desc>
+  <defs>
+    <linearGradient id="paper" x2="1" y2="1"><stop stop-color="#fff0ba"/><stop offset="1" stop-color="#ffd5b9"/></linearGradient>
+    <linearGradient id="bread" x2="0" y2="1"><stop stop-color="#efb657"/><stop offset="1" stop-color="#cd7b36"/></linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#paper)"/>
+  <circle cx="565" cy="30" r="150" fill="#fff9dd"/>
+  <circle cx="30" cy="570" r="160" fill="#ffbf98"/>
+  <path d="M42 116l8-16 8 16 17 8-17 8-8 17-8-17-17-8zm492 251 7-14 7 14 15 7-15 7-7 15-7-15-15-7z" fill="#b76040"/>
+  <text x="300" y="83" fill="#653c33" font-family="Arial,sans-serif" font-size="62" font-weight="900" text-anchor="middle">ROTI CERIA</text>
+  <text x="300" y="125" fill="#88513d" font-family="Arial,sans-serif" font-size="25" font-weight="700" text-anchor="middle">Hangat, lembut, bikin semangat.</text>
+  <circle cx="300" cy="303" r="148" fill="#fff8de"/>
+  <ellipse cx="300" cy="403" rx="166" ry="22" fill="#c88651" opacity=".22"/>
+  <path d="M150 286q-7-62 61-70 18-44 69-22 47-40 82 1 71-2 85 56 44 20 30 67l-22 73H169z" fill="url(#bread)" stroke="#955730" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M174 300q133 48 278 0l-16 75H187z" fill="#f5c783"/>
+  <path d="M231 238l-14 38m77-53-14 51m80-43-13 46" fill="none" stroke="#ffe9b6" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="261" cy="338" r="6" fill="#714832"/><circle cx="346" cy="338" r="6" fill="#714832"/>
+  <path d="M288 350q16 18 32 0" fill="none" stroke="#714832" stroke-width="5" stroke-linecap="round"/>
+  <rect x="64" y="442" width="472" height="76" rx="20" fill="#95503d"/>
+  <text x="300" y="492" fill="#fff8df" font-family="Arial,sans-serif" font-size="40" font-weight="900" text-anchor="middle">BELI 2, GRATIS 1!</text>
+  <text x="300" y="556" fill="#653c33" font-family="Arial,sans-serif" font-size="25" font-weight="700" text-anchor="middle">Pesan sekarang di toko terdekat!</text>
+</svg>

@@ -1,6 +1,6 @@
 # Jelajah Iklan — website
 
-Website berdasarkan aset dan kode web di `Jelajah-Iklan.apk` yang diberikan pengguna. Tampilan, ilustrasi, 7 halaman materi, seluruh kartu game, 4 poster puzzle, dan 25 soal asli dipertahankan. Penambahan: role admin/guru/murid, kelas, akun buatan pengajar, laporan belajar, serta musik instrumental orisinal dengan hidup/mati dan volume.
+Website berdasarkan aset dan kode web di `Jelajah-Iklan.apk` yang diberikan pengguna. Tampilan dan ilustrasi bersumber dari APK, dengan 7 halaman materi dan 25 soal pilihan ganda asli. Pilah Iklan menggunakan 20 kartu acak per permainan (10 komersial dan 10 nonkomersial). Menu Game berisi 5 poster susun gambar (3 komersial dan 2 nonkomersial), termasuk poster Roti Ceria yang ditambahkan pada versi web. Tantangan Pintar memiliki dua pilihan: Pilihan Ganda dan Esai; esai ditandai Segera hadir sampai soal disediakan. Penambahan: role admin/guru/murid, kelas, akun buatan pengajar, laporan belajar, serta musik instrumental orisinal dengan hidup/mati dan volume.
 
 ## Menjalankan lokal
 
@@ -76,7 +76,7 @@ Musik instrumental dibuat dengan Web Audio, tanpa file audio atau layanan ekster
 - `supabase/schema.sql`: tabel, RLS, trigger pembuatan profil, RPC role/nilai.
 - `supabase/seed.sql`: kunci 25 soal untuk perhitungan nilai server.
 - `supabase/functions/create-account/index.ts`: pembuatan akun oleh admin/guru.
-- `scripts/integrate.mjs`: menghasilkan hook dan bank jawaban dari referensi APK; jalankan lagi hanya bila memang ingin meregenerasi `public/app.js` dan seed.
+- `scripts/integrate.mjs`: menyelaraskan kunci pilihan ganda dari `public/app.js` ke `supabase/seed.sql`; tidak menimpa kode aplikasi dengan referensi APK.
 
 ## Pengujian dan batas verifikasi
 
@@ -92,3 +92,7 @@ Nilai soal dihitung oleh server dari jawaban yang dikirim. Kunci jawaban juga te
 Browser visual tidak tersedia pada sesi pembuatan. Belum tersambung ke proyek Supabase milik pengguna; login nyata, Edge Function di cloud, dan deployment perlu diverifikasi setelah konfigurasi di atas.
 
 Referensi resmi: [Vite di Vercel](https://vercel.com/docs/frameworks/frontend/vite), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase Auth configuration](https://supabase.com/docs/guides/auth/general-configuration), [Edge Function authorization](https://supabase.com/docs/guides/functions/auth-headers), [Railway](https://docs.railway.com/quick-start).
+
+## Pembaruan kegiatan belajar
+
+Nama menu dan laporan disesuaikan menjadi Materi, Pilah Iklan, Game, dan Tantangan Pintar. Identitas kegiatan dalam database tetap sama sehingga hasil lama tetap terbaca. Pembaruan ini tidak memerlukan migrasi database: nilai Pilah Iklan memakai total 20, sedangkan analisis setiap poster tetap 3 pertanyaan. Kelima poster muncul dalam urutan acak tanpa pengulangan sampai satu putaran selesai.
