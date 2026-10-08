@@ -13,21 +13,23 @@ async function setup(){
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;};
   w.eval(await fs.readFile('public/game-data.js','utf8'));
-  w.eval(await fs.readFile('public/app.js','utf8'));
+  w.eval((await fs.readFile('public/app.js','utf8'))+'\nwindow.testAdBank = gamePool;');
   await w.eval(`(async()=>{${portal}})()`);
   return {dom,w,d:w.document};
 }
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function enter(d,role){d.querySelector('#openLogin').click();d.querySelector(`[data-demo="${role}"]`).click();await settle();}
+async function enter(d,role){d.querySelector('#openLogin').click();d.querySelector(`[data-demo="${role}"]`).click();await settle();d.querySelector('#openDashboard').click();await settle();}
 
 test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()=>{
   const {dom,w,d}=await setup();
   try{
-    assert.equal(d.querySelectorAll('.menu-card').length,4);
-    assert.match(d.querySelector('.hero').textContent,/detektif iklan/);
+    assert.equal(d.querySelectorAll('.menu-card').length,0);
+    assert(d.querySelector('.login-cover'));
     await enter(d,'murid');
     assert.match(d.querySelector('main').textContent,/Halo, Murid Demo/);
     d.querySelector('#startLearning').click();
+    assert.equal(d.querySelectorAll('.menu-card').length,4);
+    assert.match(d.querySelector('.hero').textContent,/detektif iklan/);
     assert(d.querySelector('#openDashboard'));
     d.querySelector('[onclick="go(\'tantangan\')"]').click();
     assert.equal(d.querySelectorAll('.challenge-grid .menu-card').length,2);
@@ -70,6 +72,7 @@ test('Pilah Iklan berisi 20 kartu unik dan selalu seimbang, termasuk saat diulan
 test('Tantangan Pintar bercabang ke pilihan ganda dan esai; tombol kembali mempertahankan jawaban',async()=>{
   const {dom,w,d}=await setup();
   try{
+    await enter(d,'murid');d.querySelector('#startLearning').click();
     assert.deepEqual([...d.querySelectorAll('.menu-card b')].map(el=>el.textContent),['Materi','Pilah Iklan','Game','Tantangan Pintar']);
     d.querySelector('[onclick="go(\'tantangan\')"]').click();
     d.querySelector('[onclick="go(\'esai\')"]').click();
@@ -141,6 +144,46 @@ test('admin melihat akun; keluar membersihkan sesi dan akses dasbor',async()=>{
     assert(d.querySelector('[data-role-user="demo-admin"]').disabled);
     d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
     assert(d.querySelector('#openLogin'));assert(!d.querySelector('#openDashboard'));
+    assert(d.querySelector('.login-cover'));assert.equal(d.querySelectorAll('.menu-card').length,0);
+  }finally{dom.window.close();}
+});
+test('cover membatasi navigasi sebelum masuk dan sesudah keluar',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    for(const page of ['home','materi','game','puzzle','tantangan','soal']){
+      w.go(page);assert.equal(d.querySelector('main').dataset.page,'login');assert.equal(d.querySelectorAll('.menu-card,.ad-card,.puzzle-piece,.option').length,0);
+    }
+    d.querySelector('#openLogin').click();d.querySelector('[data-demo="murid"]').click();await settle();
+    assert.equal(d.querySelector('main').dataset.page,'home');assert.equal(d.querySelectorAll('.menu-card').length,4);
+    d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
+    w.go('game');assert.equal(d.querySelector('main').dataset.page,'login');assert.equal(w.canAccessLearning(),false);
+  }finally{dom.window.close();}
+});
+test('nilai Pilah Iklan 100, 95, 65, dan 0 sesuai jawaban; feedback menjelaskan alasannya',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    await enter(d,'murid');d.querySelector('#startLearning').click();
+    for(const correctCount of [20,19,13,0]){
+      w.startGame();
+      for(let i=0;i<20;i++){
+        const adMessage=d.querySelector('.ad-card small').textContent;
+        const type=w.testAdBank.find(ad=>ad.line===adMessage).type;
+        const correct=i<correctCount;
+        const selected=correct?type:(type==='komersial'?'nonkomersial':'komersial');
+        d.querySelector(selected==='komersial'?'#commercial':'#noncommercial').click();
+        const feedback=d.querySelector('#gameFeedback .feedback');
+        assert.match(feedback.textContent,correct?/Ya, jawabanmu benar!/:/Maaf, jawabanmu salah/);
+        assert.match(feedback.textContent,/karena/);
+        assert(feedback.textContent.includes(adMessage));
+        d.querySelector('#commercial').click(); // Disabled answers cannot score twice.
+        d.querySelector('#gameFeedback .primary').click();
+      }
+      await settle();
+      assert.equal(Number(d.querySelector('[data-game-score]').textContent),correctCount*5);
+      assert.match(d.querySelector('.score-breakdown').textContent,new RegExp(`${20-correctCount} jawaban salah`));
+      const attempt=JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts.at(-1);
+      assert.equal(attempt.correct,correctCount);assert.equal(attempt.total,20);
+    }
   }finally{dom.window.close();}
 });
 test('musik hidup/mati dan volume tersimpan, materi serta puzzle tetap bekerja',async()=>{

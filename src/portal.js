@@ -11,6 +11,7 @@ const activities = {materi:'Materi',game:'Pilah Iklan',puzzle:'Game',soal:'Pilih
 let user = null, currentTab = 'kelas', data = null, renderId = 0;
 let latestSave = null;
 const pending = new Map();
+window.canAccessLearning = () => !!user;
 
 function notify(message) { window.toast(message); }
 function message(error) { return error?.message || 'Terjadi kendala. Silakan coba lagi.'; }
@@ -36,6 +37,7 @@ function formSubmit(dialog, callback) {
   };
 }
 function strip() {
+  if (!user) return renderLoginCover();
   if (main.dataset.page === 'dashboard') return;
   main.querySelector('.account-strip')?.remove();
   const el = document.createElement('section');
@@ -45,24 +47,50 @@ function strip() {
   el.querySelector('button').onclick = user ? openDashboard : login;
 }
 
+function renderLoginCover() {
+  renderId++;
+  document.body.classList.add('on-cover');
+  main.dataset.page = 'login';
+  document.getElementById('backButton').classList.add('hidden');
+  document.getElementById('topTag').textContent = 'Petualangan dimulai di sini';
+  main.innerHTML = `<section class="login-cover" aria-label="Selamat datang di Jelajah Iklan">
+    <div class="cover-story"><span class="cover-kicker">✦ BELAJAR SAMBIL BERPETUALANG</span><h1>Iklan punya cerita.<br><span>Yuk, kita jelajahi!</span></h1><p>Jadi detektif iklan yang hebat lewat materi, permainan, dan tantangan seru.</p>
+      <div class="cover-art"><span class="cover-spark spark-one" aria-hidden="true">✦</span><span class="cover-spark spark-two" aria-hidden="true">✧</span><img class="cover-mascot" src="/mascot.svg" alt="Detektif iklan siap menemani petualanganmu"><span class="cover-sticker sticker-book"><img src="/material.svg" alt="">Belajar</span><span class="cover-sticker sticker-game"><img src="/puzzle.svg" alt="">Bermain</span></div>
+      <div class="cover-footnote">Bahasa Indonesia <span aria-hidden="true">•</span> Mengenal dunia iklan</div>
+    </div>
+    <section class="cover-login" aria-labelledby="loginTitle"><span class="login-emblem" aria-hidden="true">✦</span><h2 id="loginTitle">Halo, penjelajah!</h2><p class="login-lead">Masuk ke akunmu dan mulai petualangan.</p>
+      ${configured?`<form id="loginForm" class="form-stack"><label>Email<input type="email" name="email" placeholder="Email akunmu" autocomplete="username" required maxlength="254"></label><label>Kata sandi<div class="password-field"><input id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required><button id="togglePassword" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></div></label><p class="form-error" role="alert"></p><button class="primary full" type="submit">Masuk & mulai jelajah →</button></form>`:'<div class="notice">Mode demo lokal. Gunakan akun contoh untuk mencoba website.</div><button class="primary full" id="openLogin">Coba akun demo →</button>'}
+      <p class="login-help">Akun disediakan oleh guru atau admin sekolah.<br>Belum punya akun atau lupa sandi? Hubungi gurumu.</p><div class="cover-role-labels"><span>Admin</span><span>Guru</span><span>Murid</span></div>
+    </section>
+  </section>`;
+  main.querySelector('#openLogin')?.addEventListener('click',login);
+  if(configured){
+    const toggle=main.querySelector('#togglePassword'),password=main.querySelector('#loginPassword');
+    toggle.onclick=()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Sembunyikan':'Lihat';toggle.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');toggle.setAttribute('aria-pressed',String(visible));};
+    formSubmit(main,async values=>{
+      const result=await db.auth.signInWithPassword({email:values.email.trim(),password:values.password});
+      if(result.error)throw new Error('Email atau kata sandi tidak cocok, atau koneksi sedang bermasalah. Silakan coba lagi.');
+      let profile;
+      try{profile=await profileFor(result.data.user.id);}catch{throw new Error('Akun berhasil masuk, tetapi profil belajar belum tersedia. Hubungi admin sekolah.');}
+      enterLearning(profile);
+    });
+  }
+}
+function enterLearning(profile){
+  if(!profile || !roles[profile.role])throw new Error('Role akun belum tersedia. Hubungi admin sekolah.');
+  user=profile;data=null;latestSave=null;pending.clear();window.resetLearningSession?.();
+  root.querySelector('dialog')?.close();document.body.classList.remove('on-cover');
+  window.go('home');
+}
 function login() {
   if (!configured) {
     const dialog = modal('Coba ruang belajar', `<div class="auth-hero"><img src="/mascot.svg" alt="Maskot Jelajah Iklan"><h2>Satu petualangan, tiga peran.</h2><p class="muted">Pilih peran untuk mencoba fitur website.</p></div><div class="notice">Mode demo lokal. Data disimpan di browser ini; akun dan database sekolah belum terhubung.</div><div class="demo-roles">${Object.entries(roles).map(([role,label])=>`<button class="secondary" data-demo="${role}">${label}</button>`).join('')}</div>`);
     dialog.querySelectorAll('[data-demo]').forEach(button => button.onclick = () => {
-      user = demoUser(button.dataset.demo);
-      latestSave = null; pending.clear(); window.resetLearningSession?.();
-      dialog.close(); openDashboard();
+      enterLearning(demoUser(button.dataset.demo));
     });
     return;
   }
-  const dialog = modal('Masuk ke Jelajah Iklan', `<form class="form-stack"><p class="muted">Gunakan akun yang diberikan admin atau gurumu.</p><label>Email<input type="email" name="email" autocomplete="username" required maxlength="254"></label><label>Kata sandi<input name="password" type="password" autocomplete="current-password" required></label><p class="form-error" role="alert"></p><button class="primary" type="submit">Masuk dan mulai belajar →</button><p class="muted">Belum punya akun atau lupa kata sandi? Hubungi guru atau admin sekolah.</p></form>`);
-  formSubmit(dialog, async values => {
-    const result = await db.auth.signInWithPassword({email:values.email.trim(),password:values.password});
-    if (result.error) throw new Error('Email atau kata sandi tidak cocok. Periksa kembali akunmu.');
-    user = await profileFor(result.data.user.id);
-    latestSave = null; pending.clear(); window.resetLearningSession?.();
-    dialog.close(); openDashboard();
-  });
+  root.querySelector('dialog')?.close();renderLoginCover();main.querySelector('[name="email"]').focus();
 }
 
 function settings() {
@@ -201,13 +229,16 @@ async function record(detail) {
 }
 window.addEventListener('learning:complete',event=>record(event.detail));
 window.addEventListener('learning:navigate',()=>{renderId++;strip();showSaveStatus();});
+window.addEventListener('learning:login-required',()=>{if(main.dataset.page!=='login')renderLoginCover();});
 window.addEventListener('online',()=>{for(const detail of pending.values())record(detail);});
 document.getElementById('settingsButton').onclick=settings;
 if(!configured){const banner=document.createElement('div');banner.className='demo-banner';banner.textContent='Demo website · Coba role admin, guru, dan murid melalui tombol Masuk';document.getElementById('app').prepend(banner);}
 if(db){
-  const {data:sessionData,error}=await db.auth.getSession();
-  if(error)notify('Sesi belum bisa diperiksa. Silakan masuk lagi.');
-  if(sessionData?.session){try{user=await profileFor(sessionData.session.user.id);}catch{notify('Profil belum tersedia. Hubungi admin sekolah.');}}
-  db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){user=null;pending.clear();latestSave=null;window.resetLearningSession?.();window.go('home');}});
+  try{
+    const {data:sessionData,error}=await db.auth.getSession();
+    if(error)throw error;
+    if(sessionData?.session)enterLearning(await profileFor(sessionData.session.user.id));
+  }catch{notify('Sesi atau profil belum bisa dimuat. Silakan masuk kembali atau hubungi admin.');}
+  db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){user=null;data=null;pending.clear();latestSave=null;window.resetLearningSession?.();root.querySelector('dialog')?.close();renderLoginCover();}});
 }
-strip();
+if(!user)renderLoginCover();

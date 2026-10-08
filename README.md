@@ -21,7 +21,7 @@ Buka URL lokal yang ditampilkan, biasanya `http://127.0.0.1:5173`. Tanpa konfigu
 | Guru | Membuat kelas, membuat akun murid di kelas miliknya, melihat laporan murid di kelasnya |
 | Murid | Membuka materi/game/puzzle/soal, menyimpan hasil, melihat kelas dan hasil sendiri |
 
-Aktivitas juga dapat dicoba tanpa login; hasil tamu tidak disimpan. Aktivitas yang dicoba admin/guru tidak masuk laporan murid. Akun murid dibuatkan oleh admin/guru sesuai permintaan; tidak ada registrasi publik atau kode gabung kelas. Akun guru dibuat admin. Reset kata sandi yang terlupa ditangani pengelola melalui dashboard Supabase; pengguna yang masih dapat masuk bisa mengganti sandinya di Pengaturan.
+Pengunjung pertama kali melihat cover dan form login. Menu belajar muncul setelah login dan profil akun berhasil dimuat; sesi yang masih aktif langsung membuka menu. Keluar akun mengembalikan pengguna ke cover. Tanpa konfigurasi Supabase, cover menyediakan tombol Coba akun demo yang ditandai jelas. Aktivitas yang dicoba admin/guru tidak masuk laporan murid. Akun murid dibuatkan oleh admin/guru sesuai permintaan; tidak ada registrasi publik atau kode gabung kelas. Akun guru dibuat admin. Reset kata sandi yang terlupa ditangani pengelola melalui dashboard Supabase; pengguna yang masih dapat masuk bisa mengganti sandinya di Pengaturan.
 
 ## Menyambungkan Supabase
 
@@ -96,3 +96,5 @@ Referensi resmi: [Vite di Vercel](https://vercel.com/docs/frameworks/frontend/vi
 ## Pembaruan kegiatan belajar
 
 Nama menu dan laporan disesuaikan menjadi Materi, Pilah Iklan, Game, dan Tantangan Pintar. Identitas kegiatan dalam database tetap sama sehingga hasil lama tetap terbaca. Pembaruan ini tidak memerlukan migrasi database: nilai Pilah Iklan memakai total 20, sedangkan analisis setiap poster tetap 3 pertanyaan. Kelima poster muncul dalam urutan acak tanpa pengulangan sampai satu putaran selesai.
+
+Pilah Iklan menjelaskan jawaban benar/salah dengan jenis iklan, alasan, dan kutipan pesan iklannya. Nilai akhir memakai skala 0–100: jumlah benar dibagi 20 dikali 100 (5 poin per jawaban benar). Ringkasan menampilkan nilai, jumlah benar/salah, dan perhitungannya. Database tetap menyimpan jumlah benar dan total seperti sebelumnya, tanpa perubahan schema.

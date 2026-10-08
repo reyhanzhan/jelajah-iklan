@@ -60,6 +60,7 @@ quizAnswers = Array(questions.length).fill(null);
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function go(name){
+  if(!window.canAccessLearning?.()){window.dispatchEvent(new Event('learning:login-required'));return;}
   window.dispatchEvent(new Event('learning:leaving'));
   if(name==='materi'&&page!=='materi')materiIndex=0;
   if(name==='game'&&page!=='game')prepareGame();
@@ -98,8 +99,22 @@ function prepareGame(){
   gameCards=shuffled([...commercial,...noncommercial]);
 }
 function startGame(){prepareGame();go('game')}
-function renderGame(){let done=gameIndex>=gameCards.length;main.innerHTML=`${pageIntro('02 · Pilah Iklan','Kelompokkan iklan','Pilah 20 kartu: 10 iklan komersial dan 10 nonkomersial.', 'game.svg')}<p class="status-line">${done?'Selesai':`Kartu ${gameIndex+1} dari ${gameCards.length}`} · Benar ${gameCorrect}</p><div class="progress"><span style="width:${gameIndex/gameCards.length*100}%"></span></div>${done?`<section class="activity-card" style="text-align:center"><div class="score-circle">${gameCorrect}<small>/ ${gameCards.length} benar</small></div><h2>Hebat, permainan selesai! 🌟</h2><p>Ingat: tentukan jenis iklan dari tujuan utamanya.</p><div class="actions"><button class="secondary" onclick="startGame()">Main lagi</button><button class="primary" onclick="go('home')">Selesai</button></div></section>`:`<section class="activity-card"><div class="ad-card art-${gameIndex%5}"><span class="ad-icon">${gameCards[gameIndex].icon}</span><strong>${esc(gameCards[gameIndex].title)}</strong><small>${esc(gameCards[gameIndex].line)}</small></div><div class="choice-row"><button class="secondary" id="commercial" onclick="answerGame('komersial')">Komersial</button><button class="secondary" id="noncommercial" onclick="answerGame('nonkomersial')">Nonkomersial</button></div><div id="gameFeedback"></div></section>`}`;}
-function answerGame(type){if(gameLocked)return;gameLocked=true;const item=gameCards[gameIndex],ok=type===item.type;if(ok)gameCorrect++;document.getElementById('commercial').disabled=true;document.getElementById('noncommercial').disabled=true;document.getElementById('gameFeedback').innerHTML=`<div class="feedback ${ok?'good':'bad'}"><strong>${ok?'Benar!':'Belum tepat.'}</strong>Ini iklan ${item.type}. ${esc(item.reason)}</div><button class="primary full" style="margin-top:12px" onclick="nextGame()">${gameIndex===gameCards.length-1?'Lihat hasil':'Kartu berikutnya →'}</button>`;}
+function renderGame(){let done=gameIndex>=gameCards.length;main.innerHTML=`${pageIntro('02 · Pilah Iklan','Kelompokkan iklan','Pilah 20 kartu: 10 iklan komersial dan 10 nonkomersial.', 'game.svg')}<p class="status-line">${done?'Selesai':`Kartu ${gameIndex+1} dari ${gameCards.length}`} · Benar ${gameCorrect}</p><div class="progress"><span style="width:${gameIndex/gameCards.length*100}%"></span></div>${done?`<section class="activity-card game-result" style="text-align:center"><p class="eyebrow">Nilai akhirmu</p><div class="score-circle game-score"><strong data-game-score>${Math.round(gameCorrect/gameCards.length*100)}</strong><small>/ 100</small></div><h2>${gameCorrect===gameCards.length?'Sempurna, semua jawaban benar! 🌟':'Hebat, permainan selesai! 🌟'}</h2><div class="score-breakdown"><span><b>${gameCorrect}</b> jawaban benar</span><span><b>${gameCards.length-gameCorrect}</b> jawaban salah</span></div><p>Nilai = ${gameCorrect} ÷ ${gameCards.length} × 100 = <b>${Math.round(gameCorrect/gameCards.length*100)}</b>.</p><p>Setiap jawaban benar bernilai 5 poin. Yuk, terus berlatih mengenali tujuan iklan!</p><div class="actions"><button class="secondary" onclick="startGame()">Main lagi</button><button class="primary" onclick="go('home')">Selesai</button></div></section>`:`<section class="activity-card"><div class="ad-card art-${gameIndex%5}"><span class="ad-icon">${gameCards[gameIndex].icon}</span><strong>${esc(gameCards[gameIndex].title)}</strong><small>${esc(gameCards[gameIndex].line)}</small></div><div class="choice-row"><button class="secondary" id="commercial" onclick="answerGame('komersial')">Komersial</button><button class="secondary" id="noncommercial" onclick="answerGame('nonkomersial')">Nonkomersial</button></div><div id="gameFeedback"></div></section>`}`;}
+function answerGame(type){
+  if(gameLocked)return;
+  gameLocked=true;
+  const item=gameCards[gameIndex],ok=type===item.type;
+  if(ok)gameCorrect++;
+  document.getElementById('commercial').disabled=true;
+  document.getElementById('noncommercial').disabled=true;
+  const reason=item.reason.charAt(0).toLowerCase()+item.reason.slice(1);
+  document.getElementById('gameFeedback').innerHTML=`<div class="feedback ${ok?'good':'bad'}" role="status">
+    <strong>${ok?'Ya, jawabanmu benar!':'Maaf, jawabanmu salah.'}</strong>
+    <p>${ok?'':`Kamu memilih <b>${esc(type)}</b>. `}Iklan ini termasuk <b>${esc(item.type)}</b> karena ${esc(reason)}</p>
+    <p class="answer-excerpt">Perhatikan pesannya: “${esc(item.line)}”</p>
+    ${ok?'':'<p>Tidak apa-apa, yuk perhatikan tujuan iklannya sebelum menjawab kartu berikutnya.</p>'}
+  </div><button class="primary full" style="margin-top:12px" onclick="nextGame()">${gameIndex===gameCards.length-1?'Lihat nilai akhir':'Kartu berikutnya →'}</button>`;
+}
 function nextGame(){gameIndex++;gameLocked=false;renderGame();if(gameIndex===gameCards.length)completeLearning('game',gameCorrect,gameCards.length);window.scrollTo(0,0)}
 function drawPuzzleIndex(){if(!puzzleBag.length){puzzleBag=puzzles.map((_,i)=>i);for(let i=puzzleBag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[puzzleBag[i],puzzleBag[j]]=[puzzleBag[j],puzzleBag[i]]}if(puzzleIndex>=0&&puzzleBag.length>1&&puzzleBag[puzzleBag.length-1]===puzzleIndex)[puzzleBag[0],puzzleBag[puzzleBag.length-1]]=[puzzleBag[puzzleBag.length-1],puzzleBag[0]]}return puzzleBag.pop()}
 function resetPuzzlePieces(){do{puzzleOrder=[0,1,2,3,4,5,6,7,8];for(let i=8;i>0;i--){const j=Math.floor(Math.random()*(i+1));[puzzleOrder[i],puzzleOrder[j]]=[puzzleOrder[j],puzzleOrder[i]]}}while(puzzleOrder.every((v,i)=>v===i));puzzleSelected=null;puzzleSolved=false}
@@ -129,7 +144,7 @@ function renderEssay(){
     `<section class="section-card"><h2>Segera hadir</h2><p>Soal esai sedang disiapkan. Sambil menunggu, yuk asah pemahamanmu lewat tantangan pilihan ganda!</p><div class="actions"><button class="secondary" onclick="go('tantangan')">Kembali ke pilihan</button><button class="primary" onclick="go('soal')">Pilihan ganda →</button></div></section>`;
 }
 
-go('home');
+// Portal opens the learning menu only after the account/session is checked.
 
 function completeLearning(activity,correct,total,answers){const detail={id:crypto.randomUUID(),activity,correct,total,answers:answers?[...answers]:null};queueMicrotask(()=>window.dispatchEvent(new CustomEvent('learning:complete',{detail})));}
 window.resetLearningSession=function(){quizIndex=0;quizAnswers=Array(questions.length).fill(null);quizDone=false;materiIndex=0;gameIndex=0;gameCards=[];gameLocked=false;puzzleIndex=-1;puzzleBag=[];puzzleSolved=false;analysisAnswers=[null,null,null];};
