@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 import {build} from 'esbuild';
+import {fixtureSource} from './helpers/service-fixture.mjs';
 
-const bundle=await build({entryPoints:['src/portal.js'],bundle:true,write:false,format:'esm',loader:{'.css':'empty'},define:{'import.meta.env.VITE_SUPABASE_URL':'""','import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY':'""'}});
+const bundle=await build({entryPoints:['src/portal.js'],bundle:true,write:false,format:'esm',loader:{'.css':'empty'},plugins:[{name:'service-fixture',setup(b){b.onResolve({filter:/^\.\/data\.js$/},()=>({path:'data',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:fixtureSource,loader:'js'}));}}]});
 const portal=bundle.outputFiles[0].text;
 async function setup(){
   const dom=new JSDOM(await fs.readFile('index.html','utf8'),{url:'http://localhost',runScripts:'dangerously',pretendToBeVisual:true});
@@ -18,7 +19,8 @@ async function setup(){
   return {dom,w,d:w.document};
 }
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
-async function enter(d,role){d.querySelector('#openLogin').click();d.querySelector(`[data-demo="${role}"]`).click();await settle();d.querySelector('#openDashboard').click();await settle();}
+async function signIn(d,role){d.querySelector('[name="email"]').value=role+'@fixture.test';d.querySelector('[name="password"]').value='test-password-only';d.querySelector('#loginForm').dispatchEvent(new d.defaultView.Event('submit',{bubbles:true,cancelable:true}));await settle();}
+async function enter(d,role){await signIn(d,role);d.querySelector('#openDashboard').click();await settle();}
 
 test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()=>{
   const {dom,w,d}=await setup();
@@ -26,7 +28,7 @@ test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()
     assert.equal(d.querySelectorAll('.menu-card').length,0);
     assert(d.querySelector('.login-cover'));
     await enter(d,'murid');
-    assert.match(d.querySelector('main').textContent,/Halo, Murid Demo/);
+    assert.match(d.querySelector('main').textContent,/Halo, Murid Uji/);
     d.querySelector('#startLearning').click();
     assert.equal(d.querySelectorAll('.menu-card').length,4);
     assert.match(d.querySelector('.hero').textContent,/detektif iklan/);
@@ -37,8 +39,8 @@ test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()
     for(let i=0;i<25;i++){d.querySelectorAll('.option')[0].click();d.querySelector('.actions .primary').click();}
     await settle();
     assert.match(d.querySelector('main').textContent,/Hasil belajarmu/);
-    assert.match(d.querySelector('.save-status').textContent,/Hasil tersimpan/);
-    const saved=JSON.parse(w.localStorage.getItem('jelajah-demo-v1'));
+    assert.match(d.querySelector('.save-status').textContent,/Hasil belajar tersimpan/);
+    const saved=w.serviceFixture;
     assert.equal(saved.attempts.length,1);assert.equal(saved.attempts[0].total,25);
     w.go('home');d.querySelector('#openDashboard').click();await settle();
     d.querySelector('[data-tab="hasil"]').click();
@@ -62,8 +64,8 @@ test('Pilah Iklan berisi 20 kartu unik dan selalu seimbang, termasuk saat diulan
       await settle();
       assert.equal(messages.size,20);assert.equal(commercial,10);assert.equal(noncommercial,10);
       assert.match(d.querySelector('main').textContent,/permainan selesai/);
-      assert.match(d.querySelector('.save-status').textContent,/Hasil tersimpan/);
-      const attempts=JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts;
+      assert.match(d.querySelector('.save-status').textContent,/Hasil belajar tersimpan/);
+      const attempts=w.serviceFixture.attempts;
       assert.equal(attempts.length,round+1);assert.equal(attempts[round].total,20);assert.equal(attempts[round].correct,10);
       if(round===0)d.querySelector('[onclick="startGame()"]').click();
     }
@@ -87,7 +89,7 @@ test('Tantangan Pintar bercabang ke pilihan ganda dan esai; tombol kembali mempe
     assert(d.querySelectorAll('.option')[2].classList.contains('selected'));
     d.querySelector('#backButton').click();d.querySelector('#backButton').click();
     assert.equal(d.querySelector('main').dataset.page,'home');
-    assert.equal(w.localStorage.getItem('jelajah-demo-v1'),null);
+    assert.equal(w.serviceFixture.attempts.length,0);
   }finally{dom.window.close();}
 });
 test('Game memiliki lima poster unik: tiga komersial, dua nonkomersial, dan analisis tersimpan',async()=>{
@@ -110,16 +112,16 @@ test('Game memiliki lima poster unik: tiga komersial, dua nonkomersial, dan anal
       d.querySelector('[data-analysis="2"][data-answer="0"]').click();
       d.querySelector('#checkAnalysis').click();await settle();
       if(d.querySelector('[data-analysis="0"][data-answer="0"]').classList.contains('correct'))commercial++;else noncommercial++;
-      assert.match(d.querySelector('.save-status').textContent,/Hasil tersimpan/);
+      assert.match(d.querySelector('.save-status').textContent,/Hasil belajar tersimpan/);
       if(round<4)d.querySelector('#analysisFeedback .secondary').click();
     }
     assert.equal(posters.size,5);assert.equal(commercial,3);assert.equal(noncommercial,2);
-    const attempts=JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts;
+    const attempts=w.serviceFixture.attempts;
     assert.equal(attempts.length,5);assert(attempts.every(a=>a.activity==='puzzle'&&a.total===3));
     d.querySelector('#analysisFeedback .primary').click();assert.equal(d.querySelector('main').dataset.page,'tantangan');
   }finally{dom.window.close();}
 });
-test('guru membuat kelas dan akun murid tanpa menyimpan kata sandi demo',async()=>{
+test('guru membuat kelas dan akun murid tanpa menyimpan kata sandi',async()=>{
   const {dom,w,d}=await setup();
   try{
     await enter(d,'guru');d.querySelector('#newClass').click();
@@ -133,7 +135,7 @@ test('guru membuat kelas dan akun murid tanpa menyimpan kata sandi demo',async()
     d.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
     assert.match(d.querySelector('main').textContent,/<script>alert\(1\)<\/script>/);
     assert.equal(d.querySelectorAll('main script').length,0);
-    assert(!w.localStorage.getItem('jelajah-demo-v1').includes('test-password-only'));
+    assert(!JSON.stringify(w.serviceFixture).includes('test-password-only'));
   }finally{dom.window.close();}
 });
 test('admin melihat akun; keluar membersihkan sesi dan akses dasbor',async()=>{
@@ -141,9 +143,9 @@ test('admin melihat akun; keluar membersihkan sesi dan akses dasbor',async()=>{
   try{
     await enter(d,'admin');d.querySelector('[data-tab="akun"]').click();
     assert.equal(d.querySelectorAll('[data-role-user]').length,3);
-    assert(d.querySelector('[data-role-user="demo-admin"]').disabled);
+    assert(d.querySelector('[data-role-user="fixture-admin"]').disabled);
     d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
-    assert(d.querySelector('#openLogin'));assert(!d.querySelector('#openDashboard'));
+    assert(d.querySelector('#loginForm'));assert(!d.querySelector('#openDashboard'));
     assert(d.querySelector('.login-cover'));assert.equal(d.querySelectorAll('.menu-card').length,0);
   }finally{dom.window.close();}
 });
@@ -153,7 +155,7 @@ test('cover membatasi navigasi sebelum masuk dan sesudah keluar',async()=>{
     for(const page of ['home','materi','game','puzzle','tantangan','soal']){
       w.go(page);assert.equal(d.querySelector('main').dataset.page,'login');assert.equal(d.querySelectorAll('.menu-card,.ad-card,.puzzle-piece,.option').length,0);
     }
-    d.querySelector('#openLogin').click();d.querySelector('[data-demo="murid"]').click();await settle();
+    await signIn(d,'murid');
     assert.equal(d.querySelector('main').dataset.page,'home');assert.equal(d.querySelectorAll('.menu-card').length,4);
     d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
     w.go('game');assert.equal(d.querySelector('main').dataset.page,'login');assert.equal(w.canAccessLearning(),false);
@@ -181,7 +183,7 @@ test('nilai Pilah Iklan 100, 95, 65, dan 0 sesuai jawaban; feedback menjelaskan 
       await settle();
       assert.equal(Number(d.querySelector('[data-game-score]').textContent),correctCount*5);
       assert.match(d.querySelector('.score-breakdown').textContent,new RegExp(`${20-correctCount} jawaban salah`));
-      const attempt=JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts.at(-1);
+      const attempt=w.serviceFixture.attempts.at(-1);
       assert.equal(attempt.correct,correctCount);assert.equal(attempt.total,20);
     }
   }finally{dom.window.close();}
@@ -200,7 +202,7 @@ test('musik hidup/mati dan volume tersimpan, materi serta puzzle tetap bekerja',
     d.querySelector('.modal-head button').click();
     await enter(d,'murid');d.querySelector('#startLearning').click();w.go('materi');
     for(let i=0;i<7;i++)d.querySelector('.lesson-nav .primary').click();await settle();
-    assert.equal(JSON.parse(w.localStorage.getItem('jelajah-demo-v1')).attempts[0].activity,'materi');
+    assert.equal(w.serviceFixture.attempts[0].activity,'materi');
     w.go('puzzle');assert.equal(d.querySelectorAll('.puzzle-piece').length,9);
     // Solve by swapping actual pieces from the DOM background position.
     for(let target=0;target<9;target++){

@@ -11,7 +11,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Buka URL lokal yang ditampilkan, biasanya `http://127.0.0.1:5173`. Tanpa konfigurasi Supabase, tombol **Masuk** menyediakan demo tiga role. Mode ini diberi label jelas dan datanya hanya tersimpan di browser. Akun yang dibuat di demo bukan akun login sungguhan. Kata sandi demo tidak disimpan. Untuk mengulang demo dari awal, hapus entri `jelajah-demo-v1` di localStorage browser. Preferensi musik disimpan terpisah.
+Buka URL lokal yang ditampilkan, biasanya `http://127.0.0.1:5173`. Isi `.env.local` dengan URL dan publishable key Supabase sebelum menjalankan aplikasi. Tanpa konfigurasi tersebut, halaman menampilkan pemberitahuan layanan akun belum terhubung dan akses belajar tetap tertutup. Preferensi musik tetap disimpan per perangkat.
 
 ## Hak akses
 
@@ -21,7 +21,7 @@ Buka URL lokal yang ditampilkan, biasanya `http://127.0.0.1:5173`. Tanpa konfigu
 | Guru | Membuat kelas, membuat akun murid di kelas miliknya, melihat laporan murid di kelasnya |
 | Murid | Membuka materi/game/puzzle/soal, menyimpan hasil, melihat kelas dan hasil sendiri |
 
-Pengunjung pertama kali melihat cover dan form login. Menu belajar muncul setelah login dan profil akun berhasil dimuat; sesi yang masih aktif langsung membuka menu. Keluar akun mengembalikan pengguna ke cover. Tanpa konfigurasi Supabase, cover menyediakan tombol Coba akun demo yang ditandai jelas. Aktivitas yang dicoba admin/guru tidak masuk laporan murid. Akun murid dibuatkan oleh admin/guru sesuai permintaan; tidak ada registrasi publik atau kode gabung kelas. Akun guru dibuat admin. Reset kata sandi yang terlupa ditangani pengelola melalui dashboard Supabase; pengguna yang masih dapat masuk bisa mengganti sandinya di Pengaturan.
+Pengunjung pertama kali melihat cover dan form login. Menu belajar muncul setelah login dan profil akun berhasil dimuat; sesi yang masih aktif langsung membuka menu. Keluar akun mengembalikan pengguna ke cover. Seluruh akses menggunakan akun Supabase; tidak ada pemilihan role atau akun lokal untuk melewati login. Aktivitas yang dicoba admin/guru tidak masuk laporan murid. Akun murid dibuatkan oleh admin/guru sesuai permintaan; tidak ada registrasi publik atau kode gabung kelas. Akun guru dibuat admin. Reset kata sandi yang terlupa ditangani pengelola melalui dashboard Supabase; pengguna yang masih dapat masuk bisa mengganti sandinya di Pengaturan.
 
 ## Menyambungkan Supabase
 
@@ -52,6 +52,12 @@ Gunakan proyek Supabase baru/kosong, karena migrasi membuat tabel dan trigger ap
 
 ## Deployment: Vercel + Supabase
 
+### Tiga akun awal
+
+Template `supabase/create-initial-accounts.sql` membuat akun login `admin`, `guru`, dan `siswa`, beserta satu kelas guru dan keanggotaan siswa. Ganti tiga placeholder sandi sebelum menjalankannya melalui SQL Editor setelah schema aplikasi terpasang. Query ini tidak mereset sandi ketika dijalankan ulang. Akun awal memakai email internal `admin@jelajah-iklan.test`, `guru@jelajah-iklan.test`, dan `siswa@jelajah-iklan.test`; alamat tersebut tidak menerima email. Halaman login menerima nama pendek tersebut atau email lengkap. Akun lain tetap masuk menggunakan email yang didaftarkan. Role siswa dalam database bernama `murid`.
+
+Query berisi sandi nyata yang disiapkan khusus untuk pemilik disimpan lokal di `test-results/BUAT-3-AKUN.sql`, yang diabaikan Git. Jangan menyalinnya ke `public/` atau repository. Untuk pembuatan akun berikutnya, gunakan menu Kelola akun yang memanggil Supabase Auth Admin API melalui Edge Function. Pengujian SQL lokal memakai replika struktur Auth; login sungguhan tetap perlu dicoba setelah query dijalankan pada proyek Supabase.
+
 Rekomendasi proyek ini adalah **Vercel untuk frontend, Supabase untuk PostgreSQL, Auth, dan Edge Function**. Tidak diperlukan server Node yang selalu berjalan. Railway dapat digunakan bila kemudian ditambahkan backend khusus, worker antrean, atau proses server jangka panjang; kebutuhan saat ini sudah ditangani Supabase.
 
 1. Simpan proyek di repository Git. `.env.local` dan `node_modules` sudah diabaikan.
@@ -60,7 +66,7 @@ Rekomendasi proyek ini adalah **Vercel untuk frontend, Supabase untuk PostgreSQL
 4. Deploy. Set **Site URL** Supabase Auth ke domain produksi tersebut. Tambahkan URL pengalihan hanya jika nanti mengaktifkan flow email/password recovery.
 5. Uji tiga akun sungguhan setelah deploy: guru A tidak boleh melihat murid guru B; murid hanya boleh melihat hasil sendiri; akun admin dapat membuat guru. Uji pembuatan akun melalui Edge Function dan penyimpanan nilai soal.
 
-Environment Vite dibaca saat build; setelah perubahan variabel lakukan redeploy. Tanpa kedua variabel, deployment menampilkan mode demo. Website belum dipublikasikan oleh pekerjaan ini.
+Environment Vite dibaca saat build; setelah perubahan variabel lakukan redeploy. Tanpa kedua variabel, login tidak aktif dan akses belajar tetap tertutup.
 
 ## Musik
 
@@ -71,7 +77,7 @@ Musik instrumental dibuat dengan Web Audio, tanpa file audio atau layanan ekster
 - `reference/assets/`: salinan acuan APK yang tidak diubah.
 - `public/`: aset asli dan `app.js` dengan hook penyimpanan hasil.
 - `src/portal.js`: login, ruang admin/guru/murid, laporan, pengaturan.
-- `src/data.js`: Supabase dan penyimpanan demo.
+- `src/data.js`: akses Supabase dan pemetaan nama login akun awal.
 - `src/music.js`: musik Web Audio.
 - `supabase/schema.sql`: tabel, RLS, trigger pembuatan profil, RPC role/nilai.
 - `supabase/seed.sql`: kunci 25 soal untuk perhitungan nilai server.
@@ -85,7 +91,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-Pengujian mencakup SQL/RLS di PostgreSQL lokal melalui PGlite, perhitungan nilai server, larangan eskalasi role, isolasi kelas, penolakan signup publik, serta interaksi DOM demo dan pengaturan audio. DOM test bukan pengujian visual browser. Audio test memverifikasi hidup/mati dan preferensi dengan AudioContext tiruan; belum memverifikasi suara secara auditori.
+Pengujian mencakup SQL/RLS di PostgreSQL lokal melalui PGlite, perhitungan nilai server, larangan eskalasi role, isolasi kelas, penolakan signup publik, serta interaksi DOM dengan layanan akun tiruan khusus pengujian dan pengaturan audio. DOM test bukan pengujian visual browser. Audio test memverifikasi hidup/mati dan preferensi dengan AudioContext tiruan; belum memverifikasi suara secara auditori.
 
 Nilai soal dihitung oleh server dari jawaban yang dikirim. Kunci jawaban juga tetap ada dalam aplikasi untuk pembahasan sesuai APK; aplikasi ini ditujukan untuk latihan, bukan ujian tertutup. Skor game/puzzle serta penyelesaian materi dilaporkan client dan ditandai sebagai latihan. Laporan memuat maksimal 500 aktivitas terakhir yang dapat diakses akun. Perubahan role murid menjadi pengajar menghapus keanggotaannya sebagai murid; hasil historis tetap ada. Guru yang masih mempunyai kelas tidak dapat diturunkan menjadi murid.
 

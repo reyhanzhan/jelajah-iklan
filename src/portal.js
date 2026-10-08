@@ -1,6 +1,6 @@
 import './portal.css';
 import { Music } from './music.js';
-import { db, configured, demoUser, profileFor, dashboard, createClass, createAccount, changeRole, saveAttempt } from './data.js';
+import { db, configured, loginEmail, profileFor, dashboard, createClass, createAccount, changeRole, saveAttempt } from './data.js';
 
 const music = new Music();
 const main = document.getElementById('main');
@@ -42,9 +42,9 @@ function strip() {
   main.querySelector('.account-strip')?.remove();
   const el = document.createElement('section');
   el.className = 'account-strip'; el.setAttribute('aria-label','Akun belajar');
-  el.innerHTML = user ? `<span class="avatar">${escape(user.full_name.slice(0,1).toUpperCase())}</span><div class="account-copy"><strong>Halo, ${escape(user.full_name)}!</strong><small>${roles[user.role]}${configured?'':' · Mode demo'}</small></div><button id="openDashboard">Ruang belajar</button>` : `<span class="avatar">✦</span><div class="account-copy"><strong>Selamat datang, detektif!</strong><small>Masuk untuk menyimpan hasil belajarmu.</small></div><button id="openLogin">Masuk</button>`;
+  el.innerHTML = `<span class="avatar">${escape(user.full_name.slice(0,1).toUpperCase())}</span><div class="account-copy"><strong>Halo, ${escape(user.full_name)}!</strong><small>${roles[user.role]}</small></div><button id="openDashboard">Ruang belajar</button>`;
   main.prepend(el);
-  el.querySelector('button').onclick = user ? openDashboard : login;
+  el.querySelector('button').onclick = openDashboard;
 }
 
 function renderLoginCover() {
@@ -59,17 +59,16 @@ function renderLoginCover() {
       <div class="cover-footnote">Bahasa Indonesia <span aria-hidden="true">•</span> Mengenal dunia iklan</div>
     </div>
     <section class="cover-login" aria-labelledby="loginTitle"><span class="login-emblem" aria-hidden="true">✦</span><h2 id="loginTitle">Halo, penjelajah!</h2><p class="login-lead">Masuk ke akunmu dan mulai petualangan.</p>
-      ${configured?`<form id="loginForm" class="form-stack"><label>Email<input type="email" name="email" placeholder="Email akunmu" autocomplete="username" required maxlength="254"></label><label>Kata sandi<div class="password-field"><input id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required><button id="togglePassword" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></div></label><p class="form-error" role="alert"></p><button class="primary full" type="submit">Masuk & mulai jelajah →</button></form>`:'<div class="notice">Mode demo lokal. Gunakan akun contoh untuk mencoba website.</div><button class="primary full" id="openLogin">Coba akun demo →</button>'}
+      ${configured?`<form id="loginForm" class="form-stack"><label>Nama pengguna atau email<input type="text" name="email" placeholder="Masukkan nama pengguna atau email" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="254"></label><label>Kata sandi<div class="password-field"><input id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required><button id="togglePassword" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></div></label><p class="form-error" role="alert"></p><button class="primary full" type="submit">Masuk & mulai jelajah →</button></form>`:'<div class="notice" role="status">Layanan akun belum terhubung. Silakan hubungi admin sekolah untuk mengaktifkan akses belajar.</div>'}
       <p class="login-help">Akun disediakan oleh guru atau admin sekolah.<br>Belum punya akun atau lupa sandi? Hubungi gurumu.</p><div class="cover-role-labels"><span>Admin</span><span>Guru</span><span>Murid</span></div>
     </section>
   </section>`;
-  main.querySelector('#openLogin')?.addEventListener('click',login);
   if(configured){
     const toggle=main.querySelector('#togglePassword'),password=main.querySelector('#loginPassword');
     toggle.onclick=()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Sembunyikan':'Lihat';toggle.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');toggle.setAttribute('aria-pressed',String(visible));};
     formSubmit(main,async values=>{
-      const result=await db.auth.signInWithPassword({email:values.email.trim(),password:values.password});
-      if(result.error)throw new Error('Email atau kata sandi tidak cocok, atau koneksi sedang bermasalah. Silakan coba lagi.');
+      const result=await db.auth.signInWithPassword({email:loginEmail(values.email),password:values.password});
+      if(result.error)throw new Error('Nama pengguna/email atau kata sandi tidak cocok, atau koneksi sedang bermasalah. Silakan coba lagi.');
       let profile;
       try{profile=await profileFor(result.data.user.id);}catch{throw new Error('Akun berhasil masuk, tetapi profil belajar belum tersedia. Hubungi admin sekolah.');}
       enterLearning(profile);
@@ -83,18 +82,11 @@ function enterLearning(profile){
   window.go('home');
 }
 function login() {
-  if (!configured) {
-    const dialog = modal('Coba ruang belajar', `<div class="auth-hero"><img src="/mascot.svg" alt="Maskot Jelajah Iklan"><h2>Satu petualangan, tiga peran.</h2><p class="muted">Pilih peran untuk mencoba fitur website.</p></div><div class="notice">Mode demo lokal. Data disimpan di browser ini; akun dan database sekolah belum terhubung.</div><div class="demo-roles">${Object.entries(roles).map(([role,label])=>`<button class="secondary" data-demo="${role}">${label}</button>`).join('')}</div>`);
-    dialog.querySelectorAll('[data-demo]').forEach(button => button.onclick = () => {
-      enterLearning(demoUser(button.dataset.demo));
-    });
-    return;
-  }
-  root.querySelector('dialog')?.close();renderLoginCover();main.querySelector('[name="email"]').focus();
+  root.querySelector('dialog')?.close();renderLoginCover();main.querySelector('[name="email"]')?.focus();
 }
 
 function settings() {
-  const dialog = modal('Pengaturan', `<div class="setting-row"><div><b>Musik latar</b><small>Teman ringan saat belajar.</small></div><input id="musicToggle" class="switch" type="checkbox" role="switch" aria-label="Musik latar" ${music.enabled?'checked':''}></div><div class="setting-row"><div><b>Volume musik</b><small id="volumeValue">${Math.round(music.volume*100)}%</small></div><input class="volume" id="volume" type="range" min="0" max="100" value="${Math.round(music.volume*100)}" aria-label="Volume musik"></div><p class="muted">Pengaturan musik tersimpan di perangkat ini. Musik dimulai setelah kamu berinteraksi dengan halaman.</p><p class="form-error" role="alert" id="musicError"></p>${user?`<div class="setting-row"><div><b>${escape(user.full_name)}</b><small>${roles[user.role]}${configured?'':' · Demo lokal'}</small></div><button class="secondary" id="logout">Keluar</button></div>${configured?'<button class="secondary full" id="changePassword" style="margin-top:16px">Ganti kata sandi</button>':''}`:'<button class="primary full" id="settingsLogin">Masuk ke akun</button>'}`);
+  const dialog = modal('Pengaturan', `<div class="setting-row"><div><b>Musik latar</b><small>Teman ringan saat belajar.</small></div><input id="musicToggle" class="switch" type="checkbox" role="switch" aria-label="Musik latar" ${music.enabled?'checked':''}></div><div class="setting-row"><div><b>Volume musik</b><small id="volumeValue">${Math.round(music.volume*100)}%</small></div><input class="volume" id="volume" type="range" min="0" max="100" value="${Math.round(music.volume*100)}" aria-label="Volume musik"></div><p class="muted">Pengaturan musik tersimpan di perangkat ini. Musik dimulai setelah kamu berinteraksi dengan halaman.</p><p class="form-error" role="alert" id="musicError"></p>${user?`<div class="setting-row"><div><b>${escape(user.full_name)}</b><small>${roles[user.role]}</small></div><button class="secondary" id="logout">Keluar</button></div>${configured?'<button class="secondary full" id="changePassword" style="margin-top:16px">Ganti kata sandi</button>':''}`:'<button class="primary full" id="settingsLogin">Masuk ke akun</button>'}`);
   dialog.querySelector('#musicToggle').onchange = async event => {
     try { await music.setEnabled(event.target.checked); }
     catch (error) { dialog.querySelector('#musicError').textContent = message(error); event.target.checked = false; await music.setEnabled(false); }
@@ -141,7 +133,7 @@ function drawDashboard() {
   if (currentTab === 'akun' && user.role !== 'admin') currentTab = 'kelas';
   const quizzes = data.attempts.filter(a=>a.activity==='soal');
   const average = quizzes.length ? `${Math.round(quizzes.reduce((sum,a)=>sum+a.correct/a.total*100,0)/quizzes.length)}%` : '—';
-  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}${configured?'':' · Demo'}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p></div><img src="/mascot.svg" alt=""></div>${configured?'':'<div class="notice">Kamu sedang mencoba demo lokal. Perubahan di sini hanya tersimpan di browser ini.</div>'}<div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
+  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p></div><img src="/mascot.svg" alt=""></div><div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
   document.getElementById('startLearning').onclick = () => window.go('home');
   main.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => {currentTab=button.dataset.tab;drawDashboard();});
   if (currentTab === 'kelas') drawClasses();
@@ -165,7 +157,7 @@ function classDialog() {
 }
 function accountDialog(classId = '') {
   if (!data.classes.length && user.role==='guru') { notify('Buat kelas terlebih dahulu.'); return; }
-  const dialog = modal('Buat akun belajar', `<form class="form-stack"><label>Nama lengkap<input name="full_name" maxlength="100" autocomplete="off" required></label><label>Email akun<input name="email" type="email" maxlength="254" autocomplete="off" required></label><label>Kata sandi awal<input name="password" type="password" minlength="10" autocomplete="new-password" required></label>${user.role==='admin'?'<label>Role<select name="role"><option value="murid">Murid</option><option value="guru">Guru</option></select></label>':'<input type="hidden" name="role" value="murid">'}<label id="classLabel">Kelas<select name="class_id" required><option value="">Pilih kelas</option>${data.classes.map(c=>`<option value="${escape(c.id)}" ${c.id===classId?'selected':''}>${escape(c.name)}</option>`).join('')}</select></label><p class="muted">Minimal 10 karakter untuk kata sandi. Berikan email dan kata sandi awal kepada pemilik akun. Mereka dapat menggantinya di Pengaturan.${configured?'':' Akun demo ini tidak dapat digunakan untuk login sungguhan.'}</p><p class="form-error" role="alert"></p><button class="primary" type="submit">Buat akun</button></form>`);
+  const dialog = modal('Buat akun belajar', `<form class="form-stack"><label>Nama lengkap<input name="full_name" maxlength="100" autocomplete="off" required></label><label>Email akun<input name="email" type="email" maxlength="254" autocomplete="off" required></label><label>Kata sandi awal<input name="password" type="password" minlength="10" autocomplete="new-password" required></label>${user.role==='admin'?'<label>Role<select name="role"><option value="murid">Murid</option><option value="guru">Guru</option></select></label>':'<input type="hidden" name="role" value="murid">'}<label id="classLabel">Kelas<select name="class_id" required><option value="">Pilih kelas</option>${data.classes.map(c=>`<option value="${escape(c.id)}" ${c.id===classId?'selected':''}>${escape(c.name)}</option>`).join('')}</select></label><p class="muted">Minimal 10 karakter untuk kata sandi. Berikan email dan kata sandi awal kepada pemilik akun. Mereka dapat menggantinya di Pengaturan.</p><p class="form-error" role="alert"></p><button class="primary" type="submit">Buat akun</button></form>`);
   dialog.querySelector('select[name="role"]')?.addEventListener('change',event=>{
     const isStudent=event.target.value==='murid'; dialog.querySelector('#classLabel').hidden=!isStudent;
     dialog.querySelector('[name="class_id"]').required=isStudent;
@@ -220,7 +212,7 @@ async function record(detail) {
     await saveAttempt(owner,detail);
     if(user?.id!==owner.id)return;
     pending.delete(detail.id);
-    latestSave={activity:detail.activity,text:configured?'✓ Hasil belajar tersimpan.':'✓ Hasil tersimpan di demo browser ini.',detail};
+    latestSave={activity:detail.activity,text:'✓ Hasil belajar tersimpan.',detail};
   } catch(error){
     if(user?.id!==owner.id)return;
     latestSave={activity:detail.activity,text:`Hasil belum tersimpan: ${message(error)}`,error:true,detail};
@@ -232,7 +224,6 @@ window.addEventListener('learning:navigate',()=>{renderId++;strip();showSaveStat
 window.addEventListener('learning:login-required',()=>{if(main.dataset.page!=='login')renderLoginCover();});
 window.addEventListener('online',()=>{for(const detail of pending.values())record(detail);});
 document.getElementById('settingsButton').onclick=settings;
-if(!configured){const banner=document.createElement('div');banner.className='demo-banner';banner.textContent='Demo website · Coba role admin, guru, dan murid melalui tombol Masuk';document.getElementById('app').prepend(banner);}
 if(db){
   try{
     const {data:sessionData,error}=await db.auth.getSession();
