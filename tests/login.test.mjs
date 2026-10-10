@@ -61,7 +61,12 @@ test('tanpa konfigurasi Supabase tidak ada akun contoh atau jalur masuk lokal',a
   const {dom,w,d}=await setup({},unconfigured.outputFiles[0].text);
   try{
     assert.match(d.querySelector('main').textContent,/Layanan akun belum terhubung/);
-    assert.equal(d.querySelector('#loginForm'),null);assert.equal(d.querySelector('#openLogin'),null);
+    assert(d.querySelector('#loginForm'));assert.equal(d.querySelector('#openLogin'),null);
+    assert.equal(d.querySelector('[type="submit"]').disabled,true);
+    d.querySelector('#togglePassword').click();assert.equal(d.querySelector('#loginPassword').type,'text');
+    await submit(w,d);
+    assert.equal(d.querySelector('[type="submit"]').disabled,true);
+    assert.equal(d.querySelector('main').dataset.page,'login');
     assert.doesNotMatch(d.body.textContent,/demo/i);
     w.go('home');assert.equal(d.querySelector('main').dataset.page,'login');assert.equal(w.canAccessLearning(),false);
   }finally{dom.window.close();}

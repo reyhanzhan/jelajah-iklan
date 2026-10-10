@@ -59,13 +59,13 @@ function renderLoginCover() {
       <div class="cover-footnote">Bahasa Indonesia <span aria-hidden="true">•</span> Mengenal dunia iklan</div>
     </div>
     <section class="cover-login" aria-labelledby="loginTitle"><span class="login-emblem" aria-hidden="true">✦</span><h2 id="loginTitle">Halo, penjelajah!</h2><p class="login-lead">Masuk ke akunmu dan mulai petualangan.</p>
-      ${configured?`<form id="loginForm" class="form-stack"><label>Nama pengguna atau email<input type="text" name="email" placeholder="Masukkan nama pengguna atau email" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="254"></label><label>Kata sandi<div class="password-field"><input id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required><button id="togglePassword" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></div></label><p class="form-error" role="alert"></p><button class="primary full" type="submit">Masuk & mulai jelajah →</button></form>`:'<div class="notice" role="status">Layanan akun belum terhubung. Silakan hubungi admin sekolah untuk mengaktifkan akses belajar.</div>'}
+      <form id="loginForm" class="form-stack"><label>Nama pengguna atau email<input type="text" name="email" placeholder="Masukkan nama pengguna atau email" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="254"></label><label>Kata sandi<div class="password-field"><input id="loginPassword" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required><button id="togglePassword" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">Lihat</button></div></label>${configured?'':'<div id="connectionStatus" class="notice" role="status">Layanan akun belum terhubung. Login akan aktif setelah admin menghubungkan layanan akun.</div>'}<p class="form-error" role="alert"></p><button class="primary full" type="submit" ${configured?'':'disabled aria-describedby="connectionStatus"'}>Masuk & mulai jelajah →</button></form>
       <p class="login-help">Akun disediakan oleh guru atau admin sekolah.<br>Belum punya akun atau lupa sandi? Hubungi gurumu.</p><div class="cover-role-labels"><span>Admin</span><span>Guru</span><span>Murid</span></div>
     </section>
   </section>`;
+  const toggle=main.querySelector('#togglePassword'),password=main.querySelector('#loginPassword');
+  toggle.onclick=()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Sembunyikan':'Lihat';toggle.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');toggle.setAttribute('aria-pressed',String(visible));};
   if(configured){
-    const toggle=main.querySelector('#togglePassword'),password=main.querySelector('#loginPassword');
-    toggle.onclick=()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Sembunyikan':'Lihat';toggle.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');toggle.setAttribute('aria-pressed',String(visible));};
     formSubmit(main,async values=>{
       const result=await db.auth.signInWithPassword({email:loginEmail(values.email),password:values.password});
       if(result.error)throw new Error('Nama pengguna/email atau kata sandi tidak cocok, atau koneksi sedang bermasalah. Silakan coba lagi.');
@@ -73,6 +73,8 @@ function renderLoginCover() {
       try{profile=await profileFor(result.data.user.id);}catch{throw new Error('Akun berhasil masuk, tetapi profil belajar belum tersedia. Hubungi admin sekolah.');}
       enterLearning(profile);
     });
+  } else {
+    main.querySelector('#loginForm').onsubmit=event=>event.preventDefault();
   }
 }
 function enterLearning(profile){

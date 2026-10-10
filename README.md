@@ -62,7 +62,7 @@ Rekomendasi proyek ini adalah **Vercel untuk frontend, Supabase untuk PostgreSQL
 
 1. Simpan proyek di repository Git. `.env.local` dan `node_modules` sudah diabaikan.
 2. Import repository ke Vercel. Pilih preset **Vite**, build command `npm run build`, output `dist` (juga tersedia di `vercel.json`).
-3. Tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` di environment Vercel untuk Production dan Preview yang digunakan.
+3. Tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` di environment Vercel untuk Production dan Preview yang digunakan. Nama `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` juga didukung; jika keduanya tersedia, nilai `VITE_` diutamakan. Setelah mengubah env, lakukan deployment baru agar nilainya masuk ke hasil build. Form tetap terlihat ketika env belum diisi, tetapi tombol masuk belum aktif.
 4. Deploy. Set **Site URL** Supabase Auth ke domain produksi tersebut. Tambahkan URL pengalihan hanya jika nanti mengaktifkan flow email/password recovery.
 5. Uji tiga akun sungguhan setelah deploy: guru A tidak boleh melihat murid guru B; murid hanya boleh melihat hasil sendiri; akun admin dapat membuat guru. Uji pembuatan akun melalui Edge Function dan penyimpanan nilai soal.
 
