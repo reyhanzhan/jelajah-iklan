@@ -1,3 +1,5 @@
+import { loadContent, resetContent, saveEssay } from './content-data.js';
+import { drawContentEditor, drawEssayResults } from './content-editor.js';
 import './portal.css';
 import { Music } from './music.js';
 import { db, configured, loginEmail, profileFor, dashboard, createClass, createAccount, changeRole, saveAttempt } from './data.js';
@@ -7,7 +9,7 @@ const main = document.getElementById('main');
 const root = document.getElementById('portal');
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roles = {admin:'Admin',guru:'Guru',murid:'Murid'};
-const activities = {materi:'Materi',game:'Pilah Iklan',puzzle:'Game',soal:'Pilihan Ganda'};
+const activities = {materi:'Materi',game:'Pilah Iklan',puzzle:'Game',soal:'Pilihan Ganda',esai:'Esai'};
 let user = null, currentTab = 'kelas', data = null, renderId = 0;
 let latestSave = null;
 const pending = new Map();
@@ -71,14 +73,16 @@ function renderLoginCover() {
       if(result.error)throw new Error('Nama pengguna/email atau kata sandi tidak cocok, atau koneksi sedang bermasalah. Silakan coba lagi.');
       let profile;
       try{profile=await profileFor(result.data.user.id);}catch{throw new Error('Akun berhasil masuk, tetapi profil belajar belum tersedia. Hubungi admin sekolah.');}
-      enterLearning(profile);
+      await enterLearning(profile);
     });
   } else {
     main.querySelector('#loginForm').onsubmit=event=>event.preventDefault();
   }
 }
-function enterLearning(profile){
+async function enterLearning(profile){
   if(!profile || !roles[profile.role])throw new Error('Role akun belum tersedia. Hubungi admin sekolah.');
+  resetContent();
+  await loadContent();
   user=profile;data=null;latestSave=null;pending.clear();window.resetLearningSession?.();
   root.querySelector('dialog')?.close();document.body.classList.remove('on-cover');
   window.go('home');
@@ -132,15 +136,17 @@ async function openDashboard() {
 }
 function drawDashboard() {
   const staff = user.role !== 'murid';
-  if (currentTab === 'akun' && user.role !== 'admin') currentTab = 'kelas';
+  if ((currentTab === 'akun' && user.role !== 'admin') || (['konten','esai'].includes(currentTab) && user.role === 'murid')) currentTab = 'kelas';
   const quizzes = data.attempts.filter(a=>a.activity==='soal');
   const average = quizzes.length ? `${Math.round(quizzes.reduce((sum,a)=>sum+a.correct/a.total*100,0)/quizzes.length)}%` : '—';
-  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p></div><img src="/mascot.svg" alt=""></div><div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
+  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p></div><img src="/mascot.svg" alt=""></div><div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(staff?[['konten','Kelola konten'],['esai','Jawaban esai']]:[]),...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
   document.getElementById('startLearning').onclick = () => window.go('home');
   main.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => {currentTab=button.dataset.tab;drawDashboard();});
   if (currentTab === 'kelas') drawClasses();
   if (currentTab === 'hasil') drawResults();
   if (currentTab === 'akun') drawAccounts();
+  if (currentTab === 'konten' && staff) drawContentEditor(document.getElementById('dashboardContent'),{modal,notify});
+  if (currentTab === 'esai' && staff) drawEssayResults(document.getElementById('dashboardContent'),data.profiles);
 }
 function empty(title, description) { return `<div class="empty-state"><img src="/material.svg" alt=""><b>${title}</b><p>${description}</p></div>`; }
 function drawClasses() {
@@ -211,7 +217,7 @@ async function record(detail) {
   latestSave={activity:detail.activity,text:'Menyimpan hasil belajar…',detail};showSaveStatus();
   pending.set(detail.id,detail);
   try {
-    await saveAttempt(owner,detail);
+    if(detail.activity==='esai')await saveEssay(detail);else await saveAttempt(owner,detail);
     if(user?.id!==owner.id)return;
     pending.delete(detail.id);
     latestSave={activity:detail.activity,text:'✓ Hasil belajar tersimpan.',detail};
@@ -230,7 +236,7 @@ if(db){
   try{
     const {data:sessionData,error}=await db.auth.getSession();
     if(error)throw error;
-    if(sessionData?.session)enterLearning(await profileFor(sessionData.session.user.id));
+    if(sessionData?.session)await enterLearning(await profileFor(sessionData.session.user.id));
   }catch{notify('Sesi atau profil belum bisa dimuat. Silakan masuk kembali atau hubungi admin.');}
   db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){user=null;data=null;pending.clear();latestSave=null;window.resetLearningSession?.();root.querySelector('dialog')?.close();renderLoginCover();}});
 }

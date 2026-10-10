@@ -22,6 +22,45 @@ const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
 async function signIn(d,role){d.querySelector('[name="email"]').value=role+'@fixture.test';d.querySelector('[name="password"]').value='test-password-only';d.querySelector('#loginForm').dispatchEvent(new d.defaultView.Event('submit',{bubbles:true,cancelable:true}));await settle();}
 async function enter(d,role){await signIn(d,role);d.querySelector('#openDashboard').click();await settle();}
 
+test('admin dan guru menambah dan mengedit semua kategori; murid melihat konten yang tersimpan',async()=>{
+  for(const role of ['admin','guru']){
+    const {dom,w,d}=await setup();
+    try{
+      await enter(d,role);d.querySelector('[data-tab="konten"]').click();
+      const choose=kind=>{const select=d.querySelector('#contentKind');select.value=kind;select.dispatchEvent(new w.Event('change'));};
+      const fill=(name,value)=>{d.querySelector('dialog [name="'+name+'"]').value=value;};
+      const save=async()=>{d.querySelector('dialog form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(d.querySelector('dialog').open,false);};
+      choose('questions');d.querySelector('#addContent').click();
+      fill('q','Apa tujuan iklan baru?');for(let i=0;i<4;i++)fill('o'+i,'Pilihan '+i);fill('a','2');fill('explanation','Pembahasan baru');await save();
+      assert.equal(w.getLearningContent().questions.length,26);
+      for(const kind of ['ads','materials','puzzles']){
+        choose(kind);d.querySelector('[data-edit-content="0"]').click();fill('title','Judul baru '+kind);await save();
+        assert.equal(w.getLearningContent()[kind][0].title,'Judul baru '+kind);
+      }
+      choose('essays');d.querySelector('#addContent').click();fill('q','Tuliskan iklan buatanmu.');fill('guidance','Satu paragraf.');await save();
+      d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
+      await enter(d,'murid');assert.equal(d.querySelector('[data-tab="konten"]'),null);
+      w.go('materi');assert.match(d.querySelector('main').textContent,/Judul baru materials/);
+      w.go('esai');const answer=d.querySelector('textarea');answer.value='Beli buku kami!';answer.dispatchEvent(new w.Event('input',{bubbles:true}));
+      d.querySelector('#essayForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
+      assert.equal(w.serviceFixture.essayAnswers[0].answer,'Beli buku kami!');assert.match(d.querySelector('.save-status').textContent,/tersimpan/);
+    }finally{dom.window.close();}
+  }
+});
+
+test('edited content is escaped in lessons, ads and puzzle questions',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    await signIn(d,'murid');const bank=w.getLearningContent();
+    bank.materials[0]={title:'<img src=x onerror=alert(1)>',body:'<script>bad</script>'};
+    bank.ads.forEach(item=>item.icon='<img src=x onerror=alert(1)>');
+    bank.puzzles.forEach(item=>item.thirdQuestion='<img src=x onerror=alert(1)>');
+    w.applyLearningContent(bank,'test');w.go('materi');assert.equal(d.querySelector('main script'),null);assert.equal(d.querySelector('.page-title img'),null);
+    w.go('game');assert.equal(d.querySelector('.ad-icon img'),null);
+    w.go('puzzle');w.renderAnalysis();assert.equal(d.querySelector('.analysis-question img'),null);
+  }finally{dom.window.close();}
+});
+
 test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()=>{
   const {dom,w,d}=await setup();
   try{

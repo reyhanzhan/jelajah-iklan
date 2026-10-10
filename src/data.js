@@ -42,5 +42,5 @@ export async function changeRole(user, id, role) {
   return checked(await client().rpc('set_user_role', {target_id:id,new_role:role}));
 }
 export async function saveAttempt(user, detail) {
-  return checked(await client().rpc('record_attempt', {event_id:detail.id,activity:detail.activity,correct_count:detail.correct,total_count:detail.total,submitted_answers:detail.answers || null}));
+  return checked(await client().rpc(detail.revision ? 'record_content_attempt' : 'record_attempt', {event_id:detail.id,activity:detail.activity,correct_count:detail.correct,total_count:detail.total,submitted_answers:detail.answers || null,...(detail.revision?{content_revision:detail.revision}:{})}));
 }

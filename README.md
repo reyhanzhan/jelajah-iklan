@@ -25,6 +25,16 @@ Pengunjung pertama kali melihat cover dan form login. Menu belajar muncul setela
 
 ## Menyambungkan Supabase
 
+### Upgrade: kelola konten oleh admin dan guru
+
+Untuk database yang sudah berjalan, buka `supabase/content-management.sql`, salin seluruh isinya ke Supabase SQL Editor, lalu Run. File ini menambahkan bank konten, versi soal, penyimpanan jawaban esai, dan bucket gambar `learning-images`. Akun, kelas, dan hasil lama tetap tersedia. Query boleh dijalankan ulang; konten yang diedit pengajar tidak ditimpa. Untuk instalasi baru, jalankan `schema.sql` dan `seed.sql` lebih dahulu, lalu upgrade ini.
+
+Masuk sebagai admin/guru → **Ruang belajar → Kelola konten**. Pilih Pilihan Ganda, Esai, Pilah Iklan, Materi, atau Game Puzzle. Tombol **Tambah** membuat konten baru; **Edit** memperbarui konten yang sudah ada. Materi menggunakan teks biasa dan gambar opsional. Poster puzzle dapat diunggah dalam format JPG/PNG/WebP maksimal 5 MB, atau diisi URL HTTPS. Pilah Iklan tetap menampilkan 20 kartu acak (10 setiap kategori). Tambahan poster dan pilihan ganda mengikuti jumlah bank terbaru.
+
+Bank ini digunakan bersama oleh semua kelas. Perubahan dimuat saat login; pengajar dapat memakai **Muat ulang** sebelum mengedit. Versi sebelumnya disimpan agar nilai murid yang sedang mengerjakan tetap dihitung memakai soal yang diterimanya. Dua editor bersamaan akan mendapat pesan konflik, bukan saling menimpa perubahan. Jawaban esai disimpan terpisah tanpa nilai otomatis dan bisa dibaca di **Jawaban esai**; guru hanya melihat murid yang diajarnya, admin melihat semua.
+
+Jika upgrade belum dijalankan, kegiatan lama masih dapat dipakai dan menu Kelola konten memberi petunjuk aktivasi. File `content-management-base.sql` adalah sumber migrasi; sesudah mengubah sumber atau konten bawaan, jalankan `node scripts/build-content-migration.mjs` untuk membentuk ulang file SQL lengkap.
+
 Gunakan proyek Supabase baru/kosong, karena migrasi membuat tabel dan trigger aplikasi.
 
 1. Buat proyek Supabase. Sebelum menjalankan SQL, buka **Authentication → Users → Add user → Create new user** untuk membuat satu akun admin awal. Catat UUID akun itu. Aktifkan konfirmasi email akun awal agar dapat login.

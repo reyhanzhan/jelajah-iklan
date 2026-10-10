@@ -7,7 +7,20 @@ const state=window.serviceFixture={
 };
 export const configured=true;
 export const loginEmail=value=>value.trim().toLowerCase();
-export const db={auth:{
+export const db={
+  async rpc(name, args){
+    state.content ||= {id:crypto.randomUUID(),data:window.getLearningDefaults()};
+    if(name==='get_learning_content')return {data:JSON.parse(JSON.stringify(state.content))};
+    if(name==='save_learning_item'){
+      if(args.expected_revision!==state.content.id)return {error:{message:'Konten sudah diubah pengajar lain. Muat ulang.'}};
+      const items=state.content.data[args.content_kind];
+      if(args.item_index===null)items.push(args.item_data);else items[args.item_index]=args.item_data;
+      state.content.id=crypto.randomUUID();
+      return {data:JSON.parse(JSON.stringify(state.content))};
+    }
+    if(name==='submit_learning_essay'){state.essayAnswers=args.responses;return {};}
+  },
+  auth:{
   getSession:async()=>({data:{session:null}}),
   onAuthStateChange:callback=>{state.listener=callback;},
   async signInWithPassword({email,password}){
