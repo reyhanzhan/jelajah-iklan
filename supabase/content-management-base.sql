@@ -85,12 +85,51 @@ begin
     if item_index<0 or item_index>=jsonb_array_length(items) then raise exception 'Konten tidak ditemukan.'; end if;
     items:=jsonb_set(items,array[item_index::text],item_data,false);
   end if;
-  if content_kind='ads' and ((select count(*) from jsonb_array_elements(items) x where x->>'type'='komersial')<10 or (select count(*) from jsonb_array_elements(items) x where x->>'type'='nonkomersial')<10) then raise exception 'Sediakan minimal 10 iklan komersial dan 10 nonkomersial.'; end if;
   bank:=jsonb_set(bank,array[content_kind],items,false);
   insert into public.learning_versions(data,edited_by) values(bank,auth.uid()) returning id into new_id;
   update public.learning_current set revision=new_id where id=1;
   return jsonb_build_object('id',new_id,'data',bank);
 end; $$;
+
+create or replace function public.delete_learning_item(content_kind text,item_index integer,expected_revision uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare current_id uuid; new_id uuid; bank jsonb; items jsonb;
+begin
+  if coalesce(public.current_role(),'') not in ('admin','guru') then raise exception 'Hanya admin dan guru dapat menghapus konten.'; end if;
+  if content_kind is null or content_kind not in ('questions','essays','ads','materials','puzzles') then raise exception 'Kategori tidak valid.'; end if;
+  select revision into current_id from public.learning_current where id=1 for update;
+  if current_id is null then raise exception 'Bank konten belum dipasang.'; end if;
+  if current_id is distinct from expected_revision then raise exception 'Konten sudah diubah pengajar lain. Tutup konfirmasi dan klik Muat ulang sebelum menghapus.'; end if;
+  select data into bank from public.learning_versions where id=current_id;
+  items:=bank->content_kind;
+  if item_index is null or item_index<0 or item_index>=jsonb_array_length(items) then raise exception 'Konten tidak ditemukan.'; end if;
+  if content_kind in ('questions','materials','puzzles','ads') and jsonb_array_length(items)<=1 then raise exception 'Sisakan minimal satu konten untuk kategori ini.'; end if;
+  items:=items-item_index;
+  bank:=jsonb_set(bank,array[content_kind],items,false);
+  insert into public.learning_versions(data,edited_by) values(bank,auth.uid()) returning id into new_id;
+  update public.learning_current set revision=new_id where id=1;
+  return jsonb_build_object('id',new_id,'data',bank);
+end; $$;
+revoke all on function public.delete_learning_item(text,integer,uuid) from public,anon;
+grant execute on function public.delete_learning_item(text,integer,uuid) to authenticated;
+
+create or replace function public.save_learning_settings(ad_count integer,expected_revision uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare current_id uuid; new_id uuid; bank jsonb;
+begin
+  if coalesce(public.current_role(),'') not in ('admin','guru') then raise exception 'Hanya admin dan guru dapat mengatur permainan.'; end if;
+  if ad_count is null or ad_count<1 or ad_count>1000 then raise exception 'Jumlah kartu harus 1 sampai 1000.'; end if;
+  select revision into current_id from public.learning_current where id=1 for update;
+  if current_id is null then raise exception 'Bank konten belum dipasang.'; end if;
+  if current_id is distinct from expected_revision then raise exception 'Konten sudah diubah pengajar lain. Klik Muat ulang sebelum menyimpan.'; end if;
+  select data into bank from public.learning_versions where id=current_id;
+  bank:=jsonb_set(bank,'{settings}',jsonb_build_object('adCount',ad_count),true);
+  insert into public.learning_versions(data,edited_by) values(bank,auth.uid()) returning id into new_id;
+  update public.learning_current set revision=new_id where id=1;
+  return jsonb_build_object('id',new_id,'data',bank);
+end; $$;
+revoke all on function public.save_learning_settings(integer,uuid) from public,anon;
+grant execute on function public.save_learning_settings(integer,uuid) to authenticated;
 
 create or replace function public.record_content_attempt(event_id uuid,activity text,correct_count integer,total_count integer,submitted_answers jsonb,content_revision uuid) returns void
 language plpgsql security definer set search_path='' as $$
@@ -109,7 +148,7 @@ begin
   end if;
   if correct_count is null or total_count is null or total_count<1 or total_count>1000 or correct_count<0 or correct_count>total_count then raise exception 'Hasil tidak valid.'; end if;
   if activity='materi' and (total_count<>jsonb_array_length(bank->'materials') or correct_count<>total_count) then raise exception 'Materi belum lengkap.'; end if;
-  if activity='game' and total_count<>20 then raise exception 'Selesaikan 20 kartu.'; end if;
+  if activity='game' and total_count<>least(coalesce((bank->'settings'->>'adCount')::int,20),jsonb_array_length(bank->'ads')) then raise exception 'Selesaikan semua kartu sesuai pengaturan permainan.'; end if;
   if activity='puzzle' and total_count<>3 then raise exception 'Selesaikan tiga pertanyaan analisis.'; end if;
   insert into public.attempts(id,student_id,activity,correct,total) values(event_id,auth.uid(),activity,correct_count,total_count) on conflict(id) do nothing;
 end; $$;

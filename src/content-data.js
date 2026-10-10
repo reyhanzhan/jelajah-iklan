@@ -28,6 +28,22 @@ export async function saveContentItem(kind, index, item) {
   contentRevision = data.id;
   return data;
 }
+export async function saveGameSettings(count) {
+  const {data,error}=await db.rpc('save_learning_settings',{ad_count:count,expected_revision:contentRevision});
+  if(error)throw new Error(error.code==='PGRST202'?'Jalankan ulang query supabase/content-management.sql versi terbaru untuk mengaktifkan pengaturan.':error.message);
+  window.applyLearningContent(data.data,data.id);contentRevision=data.id;
+}
+export async function deleteContentItem(kind, index) {
+  const { data, error } = await db.rpc('delete_learning_item', {
+    content_kind:kind, item_index:index, expected_revision:contentRevision,
+  });
+  if (error) throw new Error(error.code==='PGRST202'
+    ? 'Fitur hapus belum diaktifkan. Jalankan ulang query supabase/content-management.sql versi terbaru di Supabase.'
+    : error.message);
+  window.applyLearningContent(data.data, data.id);
+  contentRevision=data.id;
+  return data;
+}
 export async function uploadContentImage(file) {
   const extensions = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
   if (!extensions[file.type] || file.size > 5 * 1024 * 1024) throw new Error('Gunakan gambar JPG, PNG, atau WebP, maksimal 5 MB.');

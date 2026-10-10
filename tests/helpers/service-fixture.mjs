@@ -11,6 +11,12 @@ export const db={
   async rpc(name, args){
     state.content ||= {id:crypto.randomUUID(),data:window.getLearningDefaults()};
     if(name==='get_learning_content')return {data:JSON.parse(JSON.stringify(state.content))};
+    if(name==='delete_learning_item'||name==='save_learning_settings'){
+      if(args.expected_revision!==state.content.id)return {error:{message:'Konten sudah diubah pengajar lain.'}};
+      if(name==='delete_learning_item')state.content.data[args.content_kind].splice(args.item_index,1);
+      else state.content.data.settings={adCount:args.ad_count};
+      state.content.id=crypto.randomUUID();return {data:JSON.parse(JSON.stringify(state.content))};
+    }
     if(name==='save_learning_item'){
       if(args.expected_revision!==state.content.id)return {error:{message:'Konten sudah diubah pengajar lain. Muat ulang.'}};
       const items=state.content.data[args.content_kind];

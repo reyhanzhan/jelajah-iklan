@@ -93,3 +93,40 @@ test('rerunning upgrade preserves edited content and prior results',async()=>{
   assert.equal((await pg.query('select revision from learning_current')).rows[0].revision,before);
   assert.equal((await pg.query('select count(*)::int as n from attempts')).rows[0].n,3);
 });
+
+test('delete and custom settings enforce staff role, conflicts and nonempty playable banks',async()=>{
+  const remove=async(kind,index,revision)=>(await pg.query('select delete_learning_item($1,$2,$3) as bank',[kind,index,revision])).rows[0].bank;
+  const settings=async(n,revision)=>(await pg.query('select save_learning_settings($1,$2) as bank',[n,revision])).rows[0].bank;
+  await as('anon',()=>assert.rejects(remove('ads',0,first)));
+  await as('murid',async()=>{
+    await assert.rejects(remove('ads',0,first),/Hanya admin dan guru/);
+    await assert.rejects(settings(7,first),/Hanya admin dan guru/);
+  });
+  let current;
+  await as('guru',async()=>{
+    let bank=await read();
+    const before=bank.id;
+    for(const kind of ['questions','materials','puzzles','essays','ads'])bank=await remove(kind,0,bank.id);
+    assert.equal(bank.data.essays.length,0);
+    await assert.rejects(remove('ads',0,before),/pengajar lain/);
+    await assert.rejects(remove('ads',-1,bank.id),/tidak ditemukan/);
+    await assert.rejects(settings(0,bank.id),/1 sampai 1000/);
+    // Removing below the former 10+10 limit is permitted.
+    while(bank.data.ads.length>3)bank=await remove('ads',0,bank.id);
+    for(let i=0;i<3;i++)bank=await save('ads',i,{...bank.data.ads[i],type:'komersial'},bank.id);
+    bank=await settings(7,bank.id);current=bank;
+  });
+  await as('murid',async()=>{
+    await pg.query("select record_content_attempt(gen_random_uuid(),'game',3,3,null,$1)",[current.id]);
+    await assert.rejects(pg.query("select record_content_attempt(gen_random_uuid(),'game',7,7,null,$1)",[current.id]),/pengaturan/);
+    // A session using the original version is still accepted.
+    await pg.query("select record_content_attempt(gen_random_uuid(),'game',20,20,null,$1)",[first]);
+  });
+  await as('admin',async()=>{
+    let bank=await read();
+    for(const kind of ['questions','materials','puzzles','ads']){
+      while(bank.data[kind].length>1)bank=await remove(kind,0,bank.id);
+      await assert.rejects(remove(kind,0,bank.id),/minimal satu/);
+    }
+  });
+});

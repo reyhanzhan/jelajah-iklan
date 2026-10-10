@@ -48,6 +48,31 @@ test('admin dan guru menambah dan mengedit semua kategori; murid melihat konten 
   }
 });
 
+test('hapus meminta konfirmasi dan pengaturan kartu custom digunakan murid',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    await enter(d,'guru');d.querySelector('[data-tab="konten"]').click();
+    const select=d.querySelector('#contentKind');select.value='ads';select.dispatchEvent(new w.Event('change'));
+    const before=w.getLearningContent().ads.length;
+    d.querySelector('[data-delete-content="0"]').click();d.querySelector('#cancelDeleteContent').click();
+    assert.equal(w.getLearningContent().ads.length,before);
+    d.querySelector('[data-delete-content="0"]').click();d.querySelector('#confirmDeleteContent').click();await settle();
+    assert.equal(w.getLearningContent().ads.length,before-1);
+    d.querySelector('#gameSettings [name="adCount"]').value='3';
+    d.querySelector('#gameSettings').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
+    assert.equal(w.getLearningContent().settings.adCount,3);
+    // All ads may have the same category; there is no forced quota.
+    w.serviceFixture.content.data.ads=w.serviceFixture.content.data.ads.slice(0,3).map(ad=>({...ad,type:'komersial'}));
+    d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();await signIn(d,'murid');
+    w.go('game');
+    for(let i=0;i<3;i++){assert.match(d.querySelector('.status-line').textContent,/dari 3/);d.querySelector('#commercial').click();d.querySelector('#gameFeedback .primary').click();}
+    await settle();assert.equal(d.querySelector('[data-game-score]').textContent,'100');
+    assert.equal(w.serviceFixture.attempts[0].total,3);
+    const bank=w.getLearningContent();bank.settings.adCount=20;w.applyLearningContent(bank,'test');w.startGame();
+    assert.match(d.querySelector('.status-line').textContent,/dari 3/);
+  }finally{dom.window.close();}
+});
+
 test('edited content is escaped in lessons, ads and puzzle questions',async()=>{
   const {dom,w,d}=await setup();
   try{
@@ -86,7 +111,7 @@ test('tampilan APK, 25 soal, hasil tersimpan dan terbaca di ruang murid',async()
     assert.match(d.querySelector('#resultRows').textContent,/Pilihan Ganda/);
   }finally{dom.window.close();}
 });
-test('Pilah Iklan berisi 20 kartu unik dan selalu seimbang, termasuk saat diulang',async()=>{
+test('Pilah Iklan berisi 20 kartu unik secara default, dengan komposisi bebas',async()=>{
   const {dom,w,d}=await setup();
   try{
     await enter(d,'murid');d.querySelector('#startLearning').click();
@@ -101,11 +126,11 @@ test('Pilah Iklan berisi 20 kartu unik dan selalu seimbang, termasuk saat diulan
         d.querySelector('#gameFeedback .primary').click();
       }
       await settle();
-      assert.equal(messages.size,20);assert.equal(commercial,10);assert.equal(noncommercial,10);
-      assert.match(d.querySelector('main').textContent,/permainan selesai/);
+      assert.equal(messages.size,20);assert.equal(commercial+noncommercial,20);
+      assert.match(d.querySelector('main').textContent,/Nilai akhirmu/);
       assert.match(d.querySelector('.save-status').textContent,/Hasil belajar tersimpan/);
       const attempts=w.serviceFixture.attempts;
-      assert.equal(attempts.length,round+1);assert.equal(attempts[round].total,20);assert.equal(attempts[round].correct,10);
+      assert.equal(attempts.length,round+1);assert.equal(attempts[round].total,20);assert.equal(attempts[round].correct,commercial);
       if(round===0)d.querySelector('[onclick="startGame()"]').click();
     }
   }finally{dom.window.close();}
