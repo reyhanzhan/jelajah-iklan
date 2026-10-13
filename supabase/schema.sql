@@ -76,9 +76,6 @@ grant all on public.profiles,public.classes,public.memberships,public.attempts,p
 create function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if coalesce(new.raw_app_meta_data->>'provisioned','false') <> 'true' then
-    raise exception 'Akun hanya dapat dibuat oleh admin atau guru.';
-  end if;
   insert into public.profiles(id,full_name,role)
   values(new.id,left(coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'),''),'Murid'),100),'murid');
   return new;
@@ -88,6 +85,21 @@ $$;
 insert into public.profiles(id,full_name)
 select id,left(coalesce(nullif(raw_user_meta_data->>'full_name',''),'Admin Sekolah'),100) from auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
+
+-- Auth Admin API mengisi app_metadata setelah INSERT, dalam transaksi yang sama.
+create function public.ensure_provisioned_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if exists(select 1 from auth.users where id=new.id
+    and coalesce(raw_app_meta_data->>'provisioned','false')<>'true') then
+    raise exception 'Akun hanya dapat dibuat oleh admin atau guru.';
+  end if;
+  return new;
+end;
+$$;
+create constraint trigger on_auth_user_provisioned after insert on auth.users
+deferrable initially deferred for each row execute function public.ensure_provisioned_user();
+revoke all on function public.ensure_provisioned_user() from public,anon,authenticated;
 
 create function public.set_user_role(target_id uuid,new_role text) returns void
 language plpgsql security definer set search_path = '' as $$

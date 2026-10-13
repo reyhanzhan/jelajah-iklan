@@ -66,6 +66,8 @@ Tidak ada lagi batas minimal 10 karakter di aplikasi; form dan Edge Function men
 
 ## Deployment: Vercel + Supabase
 
+Jika membuat akun gagal dengan `Database error creating new user` padahal `profiles` dan trigger sudah ada, jalankan seluruh `supabase/fix-account-creation.sql` di SQL Editor. Trigger versi lama membaca `provisioned` terlalu awal: Auth Admin API memasukkan pengguna terlebih dahulu lalu memperbarui `app_metadata` dalam transaksi yang sama. Perbaikan menunda pemeriksaan izin hingga akhir transaksi, sambil tetap membuat profil dan menyinkronkan email. Signup tanpa penanda tepercaya tetap dibatalkan. Skrip aman dijalankan ulang dan tidak menghapus akun/kelas/nilai. Instalasi baru sudah mendapat perbaikan melalui `schema.sql`. Cukup jalankan SQL ini untuk memperbaiki akar masalah di instalasi lama; pembaruan pesan Edge Function bersifat tambahan.
+
 ### Tiga akun awal
 
 Template `supabase/create-initial-accounts.sql` membuat akun login `admin`, `guru`, dan `siswa`, beserta satu kelas guru dan keanggotaan siswa. Ganti tiga placeholder sandi sebelum menjalankannya melalui SQL Editor setelah schema aplikasi terpasang. Query ini tidak mereset sandi ketika dijalankan ulang. Akun awal memakai email internal `admin@jelajah-iklan.test`, `guru@jelajah-iklan.test`, dan `siswa@jelajah-iklan.test`; alamat tersebut tidak menerima email. Halaman login menerima nama pendek tersebut atau email lengkap. Akun lain tetap masuk menggunakan email yang didaftarkan. Role siswa dalam database bernama `murid`.

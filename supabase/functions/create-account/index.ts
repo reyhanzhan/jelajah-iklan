@@ -76,7 +76,7 @@ Deno.serve(async (request: Request) => {
     }
     const reason=String(createError?.message || 'Supabase Auth tidak memberi keterangan.').replace(/\s+/g,' ').slice(0,300);
     console.error('[create-account] Auth createUser failed', {code:createError?.code,status:createError?.status,message:reason});
-    if(/database error/i.test(reason)) return json({error:`Supabase gagal membuat profil akun di database (${reason}). Periksa apakah schema.sql sudah membuat tabel profiles dan trigger on_auth_user_created.`},400);
+    if(/database error/i.test(reason)) return json({error:`Supabase gagal membuat profil akun di database (${reason}). Admin perlu menjalankan fix-account-creation.sql di SQL Editor Supabase. Jika masih gagal, periksa log Auth/Postgres.`},400);
     return json({error:`Supabase Auth menolak pembuatan akun${createError?.code?` (${createError.code})`:''}: ${reason}`},400);
   }
   try {
