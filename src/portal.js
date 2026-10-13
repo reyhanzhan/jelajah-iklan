@@ -11,7 +11,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const roles = {admin:'Admin',guru:'Guru',murid:'Murid'};
 const activities = {materi:'Materi',game:'Pilah Iklan',puzzle:'Game',soal:'Pilihan Ganda',esai:'Esai'};
 let user = null, currentTab = 'kelas', data = null, renderId = 0;
-let latestSave = null;
+let latestSave = null, selectedClassId = '';
 const pending = new Map();
 window.canAccessLearning = () => !!user;
 
@@ -121,7 +121,7 @@ async function enterLearning(profile){
   if(!profile || !roles[profile.role])throw new Error('Role akun belum tersedia. Hubungi admin sekolah.');
   resetContent();
   await loadContent();
-  user=profile;data=null;latestSave=null;pending.clear();window.resetLearningSession?.();
+  user=profile;data=null;latestSave=null;selectedClassId='';pending.clear();window.resetLearningSession?.();
   root.querySelector('dialog')?.close();document.body.classList.remove('on-cover');
   window.go('home');
 }
@@ -188,7 +188,13 @@ function drawDashboard() {
 }
 function empty(title, description) { return `<div class="empty-state"><img src="/material.svg" alt=""><b>${title}</b><p>${description}</p></div>`; }
 function drawClasses() {
-  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelas belajar</h2>${user.role!=='murid'?'<button class="secondary" id="newClass">+ Buat kelas</button>':''}</div>${data.classes.length?data.classes.map(c=>`<article class="class-card"><div><h3>${escape(c.name)}</h3><p>${data.memberships.filter(m=>m.class_id===c.id).length} murid${user.role==='admin'?` · ${escape(data.profiles.find(p=>p.id===c.teacher_id)?.full_name || 'Pengajar')}`:''}</p></div>${user.role!=='murid'?`<div class="manage-actions"><button class="secondary" data-add="${escape(c.id)}">+ Murid</button><button class="secondary" data-edit-class="${escape(c.id)}">Edit</button><button class="secondary danger" data-delete-class="${escape(c.id)}">Hapus</button></div>`:'<span class="role-badge">Terdaftar</span>'}</article>`).join(''):empty('Belum ada kelas',user.role==='murid'?'Guru akan mendaftarkan akunmu ke kelas.':'Buat kelas pertama, lalu tambahkan akun murid.')}<p class="muted">${user.role==='murid'?'Kamu tetap bisa membuka semua kegiatan belajar.':'Akun murid dibuat oleh guru atau admin, lalu langsung terdaftar di kelas yang dipilih.'}</p></section>${user.role!=='murid'?`<section class="section-card"><h2>Murid di kelasmu</h2>${studentTable()}</section>`:''}`;
+  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelas belajar</h2>${user.role!=='murid'?'<button class="secondary" id="newClass">+ Buat kelas</button>':''}</div>${data.classes.length?data.classes.map(c=>`<article class="class-card"><div><h3>${escape(c.name)}</h3><p>${data.memberships.filter(m=>m.class_id===c.id).length} murid${user.role==='admin'?` · ${escape(data.profiles.find(p=>p.id===c.teacher_id)?.full_name || 'Pengajar')}`:''}</p></div>${user.role!=='murid'?`<div class="manage-actions"><button class="secondary" data-view-class="${escape(c.id)}" aria-controls="classRoster">Lihat murid</button><button class="secondary" data-add="${escape(c.id)}">+ Murid</button><button class="secondary" data-edit-class="${escape(c.id)}">Edit</button><button class="secondary danger" data-delete-class="${escape(c.id)}">Hapus</button></div>`:'<span class="role-badge">Terdaftar</span>'}</article>`).join(''):empty('Belum ada kelas',user.role==='murid'?'Guru akan mendaftarkan akunmu ke kelas.':'Buat kelas pertama, lalu tambahkan akun murid.')}<p class="muted">${user.role==='murid'?'Kamu tetap bisa membuka semua kegiatan belajar.':'Akun murid dibuat oleh guru atau admin, lalu langsung terdaftar di kelas yang dipilih.'}</p></section>${user.role!=='murid'?`<section class="section-card" id="classRoster" aria-labelledby="rosterTitle"></section>`:''}`;
+  drawStudentRoster();
+  main.querySelectorAll('[data-view-class]').forEach(button=>button.onclick=()=>{
+    selectedClassId=button.dataset.viewClass;drawStudentRoster();
+    document.getElementById('rosterTitle').focus({preventScroll:true});
+    document.getElementById('classRoster').scrollIntoView({behavior:'smooth',block:'start'});
+  });
   document.getElementById('newClass')?.addEventListener('click', ()=>classDialog());
   main.querySelectorAll('[data-edit-class]').forEach(button=>button.onclick=()=>classDialog(data.classes.find(c=>c.id===button.dataset.editClass)));
   main.querySelectorAll('[data-delete-class]').forEach(button=>button.onclick=()=>{
@@ -198,8 +204,21 @@ function drawClasses() {
   bindAccountActions();
   main.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>accountDialog(button.dataset.add));
 }
-function studentTable() {
-  const students=data.profiles.filter(p=>p.role==='murid');
+function drawStudentRoster() {
+  const roster=document.getElementById('classRoster');
+  if(!roster)return;
+  if(!data.classes.some(c=>c.id===selectedClassId))selectedClassId='';
+  const classroom=data.classes.find(c=>c.id===selectedClassId);
+  roster.innerHTML=`<h2 id="rosterTitle" tabindex="-1">${classroom?`Murid di ${escape(classroom.name)}`:'Murid di kelasmu'}</h2><label class="roster-filter">Tampilkan murid<select class="field" id="rosterClass"><option value="">Semua kelas / akun murid</option>${data.classes.map(c=>`<option value="${escape(c.id)}" ${c.id===selectedClassId?'selected':''}>${escape(c.name)}</option>`).join('')}</select></label><p class="muted">Lihat nama, email, kelas, dan jumlah aktivitas murid. Edit untuk mengubah nama, email, atau kata sandi. Hapus akan menghapus akun beserta nilai murid secara permanen.</p>${studentTable(selectedClassId)}`;
+  roster.querySelector('#rosterClass').onchange=event=>{
+    selectedClassId=event.target.value;drawStudentRoster();
+    document.getElementById('rosterClass').focus({preventScroll:true});
+  };
+  main.querySelectorAll('[data-view-class]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.viewClass===selectedClassId)));
+  bindAccountActions();
+}
+function studentTable(classId = '') {
+  const students=data.profiles.filter(p=>p.role==='murid' && (!classId || data.memberships.some(m=>m.student_id===p.id && m.class_id===classId)));
   if (!students.length) return empty('Belum ada murid','Tambahkan murid lewat tombol di kelas.');
   return `<div class="table-wrap"><table><thead><tr><th>Nama murid</th><th>Email akun</th><th>Kelas</th><th>Aktivitas</th><th>Tindakan</th></tr></thead><tbody>${students.map(p=>`<tr><td>${escape(p.full_name)}</td><td>${escape(p.email || 'Belum tersedia')}</td><td>${data.memberships.filter(m=>m.student_id===p.id).map(m=>escape(data.classes.find(c=>c.id===m.class_id)?.name || '—')).join(', ') || '—'}</td><td>${data.attempts.filter(a=>a.student_id===p.id).length}</td><td>${accountActions(p)}</td></tr>`).join('')}</tbody></table></div>`;
 }

@@ -11,6 +11,7 @@ async function setup(){
   const dom=new JSDOM(await fs.readFile('index.html','utf8'),{url:'http://localhost',runScripts:'dangerously',pretendToBeVisual:true});
   const w=dom.window;
   w.scrollTo=()=>{};
+  w.HTMLElement.prototype.scrollIntoView=function(){w.lastScrolled=this.id;};
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;};
   w.eval(await fs.readFile('public/game-data.js','utf8'));
@@ -19,6 +20,37 @@ async function setup(){
   return {dom,w,d:w.document};
 }
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
+test('lihat murid menyaring per kelas dan tetap bisa edit/hapus akun yang dipilih',async()=>{
+  const {dom,w,d}=await setup();
+  const submit=async()=>{d.querySelector('dialog form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();};
+  try{
+    const state=w.serviceFixture;
+    state.classes.push({id:'class-second',name:'Kelas Kedua',teacher_id:'fixture-guru'},{id:'class-empty',name:'Kelas Kosong',teacher_id:'fixture-guru'});
+    state.profiles.push({id:'student-second',full_name:'Murid Kedua',email:'kedua@fixture.test',role:'murid'});
+    state.memberships.push({class_id:'class-second',student_id:'student-second'});
+    await enter(d,'guru');
+    d.querySelector('[data-view-class="class-second"]').click();
+    assert.equal(w.lastScrolled,'classRoster');assert.equal(d.activeElement.id,'rosterTitle');
+    assert.equal(d.querySelector('#rosterTitle').textContent,'Murid di Kelas Kedua');
+    assert.equal(d.querySelectorAll('#classRoster tbody tr').length,1);
+    assert.match(d.querySelector('#classRoster tbody').textContent,/kedua@fixture.test/);
+    assert(!d.querySelector('#classRoster [data-edit-account="fixture-murid"]'));
+    d.querySelector('#classRoster [data-edit-account]').click();
+    assert.equal(d.querySelector('dialog [name="email"]').value,'kedua@fixture.test');
+    d.querySelector('dialog [name="full_name"]').value='Nama Diperbarui';await submit();
+    assert.equal(d.querySelector('#rosterClass').value,'class-second');assert.match(d.querySelector('#classRoster tbody').textContent,/Nama Diperbarui/);
+    d.querySelector('#classRoster [data-delete-account]').click();d.querySelector('#cancelRemoval').click();
+    assert(state.profiles.some(p=>p.id==='student-second'));
+    d.querySelector('#classRoster [data-delete-account]').click();await submit();
+    assert.match(d.querySelector('#classRoster').textContent,/Belum ada murid/);assert(state.profiles.some(p=>p.id==='fixture-murid'));
+    d.querySelector('[data-view-class="class-empty"]').click();assert.match(d.querySelector('#classRoster').textContent,/Belum ada murid/);
+    d.querySelector('#rosterClass').value='';d.querySelector('#rosterClass').dispatchEvent(new w.Event('change'));
+    assert.equal(d.querySelectorAll('#classRoster tbody tr').length,1);
+    d.querySelector('[data-view-class="class-empty"]').click();
+    d.querySelector('[data-delete-class="class-empty"]').click();await submit();
+    assert.equal(d.querySelector('#rosterClass').value,'');assert.match(d.querySelector('#classRoster').textContent,/murid@fixture.test/);
+  }finally{dom.window.close();}
+});
 test('ikon mata, email murid, edit akun/kelas, serta konfirmasi hapus',async()=>{
   const {dom,w,d}=await setup();
   const submit=async()=>{d.querySelector('dialog form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();};
