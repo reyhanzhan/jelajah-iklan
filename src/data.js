@@ -31,9 +31,15 @@ export async function createClass(user, name) {
 export async function createAccount(user, values) {
   const result = await client().functions.invoke('create-account', {body:values});
   if (result.error) {
-    let message;
-    try { message = (await result.error.context.json()).error; } catch {}
-    throw new Error(message || 'Pembuatan akun gagal. Periksa koneksi dan pemasangan fungsi create-account.');
+    let details;
+    try { details = await result.error.context.json(); } catch {}
+    const status=result.error.context?.status;
+    if(status===404 || details?.code==='NOT_FOUND') throw new Error('Layanan pembuatan akun belum terpasang. Admin perlu deploy Edge Function create-account di Supabase terlebih dahulu.');
+    if(details?.error) throw new Error(details.error);
+    if(status===401) throw new Error('Sesi tidak valid atau kedaluwarsa. Keluar lalu masuk kembali sebelum membuat akun.');
+    if(status===403) throw new Error('Akses ditolak. Hanya admin atau guru pengelola kelas yang dapat membuat akun ini.');
+    if(result.error.name==='FunctionsFetchError') throw new Error('Layanan pembuatan akun tidak dapat dihubungi. Periksa koneksi dan pastikan Edge Function create-account sudah di-deploy di Supabase.');
+    throw new Error('Layanan pembuatan akun sedang bermasalah. Admin dapat memeriksa log create-account di Supabase.');
   }
   if (result.data?.error) throw new Error(result.data.error);
   return result.data;

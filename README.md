@@ -50,6 +50,8 @@ Gunakan proyek Supabase baru/kosong, karena migrasi membuat tabel dan trigger ap
 4. Di pengaturan Authentication, nonaktifkan **Allow new users to sign up**. Trigger database juga menolak pembuatan akun yang tidak memiliki metadata server `provisioned`. Setelah pemasangan, gunakan website untuk membuat akun berikutnya.
 5. Pasang Edge Function pembuatan akun. Dari direktori proyek:
 
+   Alternatif tanpa terminal: **Supabase → Edge Functions → Deploy a new function → Via Editor**. Beri nama tepat `create-account`, ganti seluruh isi `index.ts` dengan `supabase/functions/create-account/index.ts` dari repo ini, lalu **Deploy function**. Ini dipasang di Supabase, terpisah dari deployment frontend Vercel. Jika belum dipasang, endpoint merespons 404 dan menu Buat akun tidak dapat bekerja.
+
    ```powershell
    npx supabase login
    npx supabase link --project-ref ID_PROYEK_SUPABASE
@@ -59,6 +61,8 @@ Gunakan proyek Supabase baru/kosong, karena migrasi membuat tabel dan trigger ap
    Fungsi menggunakan secret server bawaan Supabase (`SUPABASE_SECRET_KEYS.default`, atau legacy `SUPABASE_SERVICE_ROLE_KEY`). Tidak perlu menaruh secret ini di frontend. JWT platform dan `auth.getUser()` memvalidasi sesi, lalu fungsi memeriksa role dan kepemilikan kelas sebelum membuat akun. Pembuatan murid otomatis menambahkan keanggotaan kelas; kegagalan tahap itu membatalkan akun yang baru dibuat.
 6. Salin `.env.example` menjadi `.env.local`, isi URL proyek dan **publishable key** dari Supabase Project Settings → API Keys. Legacy anon key juga didukung. **Jangan gunakan service-role/secret key pada variabel `VITE_*`** karena variabel tersebut dikirim ke browser.
 7. Jalankan ulang dev server. Masuk menggunakan akun admin awal, buat guru, masuk sebagai guru, buat kelas, lalu buat akun murid. Form pembuatan akun tidak mengirim email; pengajar memberikan email login dan sandi awal kepada pemilik akun.
+
+Tidak ada lagi batas minimal 10 karakter di aplikasi; form dan Edge Function menerima sandi yang tidak kosong (maksimal 128 karakter). Supabase Auth tetap menerapkan aturan sandi proyek, dan penolakan ditampilkan pada form. Email akun baru harus belum digunakan. Jika mengubah kode fungsi pembuatan akun, deploy ulang fungsi `create-account` juga, bukan hanya push frontend ke Vercel.
 
 ## Deployment: Vercel + Supabase
 

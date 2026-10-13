@@ -222,11 +222,12 @@ test('guru membuat kelas dan akun murid tanpa menyimpan kata sandi',async()=>{
     const buttons=d.querySelectorAll('[data-add]');buttons[buttons.length-1].click();
     d.querySelector('[name="full_name"]').value='<script>alert(1)</script>';
     d.querySelector('[name="email"]').value='uji@example.com';
-    d.querySelector('[name="password"]').value='test-password-only';
+    d.querySelector('[name="password"]').value='murid1';
+    assert.equal(d.querySelector('[name="password"]').minLength,-1);
     d.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
     assert.match(d.querySelector('main').textContent,/<script>alert\(1\)<\/script>/);
     assert.equal(d.querySelectorAll('main script').length,0);
-    assert(!JSON.stringify(w.serviceFixture).includes('test-password-only'));
+    assert(!JSON.stringify(w.serviceFixture).includes('murid1'));
   }finally{dom.window.close();}
 });
 test('admin melihat akun; keluar membersihkan sesi dan akses dasbor',async()=>{

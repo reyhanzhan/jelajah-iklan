@@ -5,11 +5,11 @@ import fs from 'node:fs/promises';
 const source=await fs.readFile('supabase/functions/create-account/index.ts','utf8');
 const compiled=await transform(source.replace("import { createClient } from 'npm:@supabase/supabase-js@2';",''),{loader:'ts',target:'es2022'});
 
-function setup(role,owner='caller',membershipError=false){
+function setup(role,owner='caller',membershipError=false,createError=null,authError=null){
   const calls={created:0,deleted:0,updated:0};let handler;
   const client={
-    auth:{getUser:async()=>({data:{user:{id:'caller'}},error:null}),admin:{
-      createUser:async()=>{calls.created++;return {data:{user:{id:'new-student'}},error:null};},
+    auth:{getUser:async()=>({data:{user:authError?null:{id:'caller'}},error:authError}),admin:{
+      createUser:async()=>{calls.created++;return {data:{user:createError?null:{id:'new-student'}},error:createError};},
       deleteUser:async()=>{calls.deleted++;return {error:null};}
     }},
     from(table){return {
@@ -28,10 +28,21 @@ test('fungsi akun menolak murid, kelas guru lain, dan pembuatan guru oleh guru',
     assert.equal(response.status,403);assert.equal(calls.created,0);
   }
 });
-test('guru membuat murid sendiri, admin membuat guru, password pendek ditolak',async()=>{
+test('guru membuat murid sendiri, admin membuat guru, panjang sandi mengikuti Supabase',async()=>{
   const teacher=setup('guru');assert.equal((await teacher.run(student)).status,200);assert.equal(teacher.calls.created,1);
   const admin=setup('admin');assert.equal((await admin.run({...student,role:'guru'})).status,200);assert.equal(admin.calls.updated,1);
-  assert.equal((await admin.run({...student,password:'123'})).status,400);
+  assert.equal((await admin.run({...student,password:'123456'})).status,200);
+  assert.equal((await admin.run({...student,password:'123'})).status,200);
+  assert.equal((await admin.run({...student,password:''})).status,400);
+});
+
+test('sesi tidak sah ditolak dan error email/sandi dijelaskan',async()=>{
+  const invalid=setup('admin','caller',false,null,new Error('Invalid JWT'));
+  assert.equal((await invalid.run(student)).status,401);assert.equal(invalid.calls.created,0);
+  const duplicate=setup('admin','caller',false,{code:'email_exists',message:'Email exists'});
+  const response=await duplicate.run(student);assert.equal(response.status,409);assert.match((await response.json()).error,/Email ini sudah digunakan/);
+  const weak=setup('admin','caller',false,{code:'weak_password',message:'Password should be at least 6 characters.'});
+  assert.match((await(await weak.run({...student,password:'123'})).json()).error,/minimal 6 karakter/);
 });
 test('akun baru dibatalkan saat keanggotaan kelas gagal disimpan',async()=>{
   const {run,calls}=setup('guru','caller',true);assert.equal((await run(student)).status,500);assert.equal(calls.deleted,1);

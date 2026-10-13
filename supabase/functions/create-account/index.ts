@@ -22,7 +22,7 @@ Deno.serve(async (request: Request) => {
   try { payload=await request.json(); } catch { return json({error:'Data tidak valid.'},400); }
   if (!payload || typeof payload!=='object' || Array.isArray(payload)) return json({error:'Data tidak valid.'},400);
   const {full_name,email,password,role,class_id}=payload;
-  if (typeof full_name!=='string' || !full_name.trim() || full_name.trim().length>100 || typeof email!=='string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password!=='string' || password.length<10 || password.length>128 || !['murid','guru'].includes(role)) return json({error:'Periksa nama, email, role, dan kata sandi (10–128 karakter).'},400);
+  if (typeof full_name!=='string' || !full_name.trim() || full_name.trim().length>100 || typeof email!=='string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password!=='string' || !password.length || password.length>128 || !['murid','guru'].includes(role)) return json({error:'Lengkapi nama, email, role, dan kata sandi (maksimal 128 karakter).'},400);
   if (role==='guru' && actor.role!=='admin') return json({error:'Hanya admin dapat membuat akun guru.'},403);
   if (role==='murid') {
     if (typeof class_id!=='string') return json({error:'Pilih kelas untuk murid.'},400);
@@ -33,7 +33,14 @@ Deno.serve(async (request: Request) => {
     email:email.trim().toLowerCase(),password,email_confirm:true,
     user_metadata:{full_name:full_name.trim()},app_metadata:{provisioned:true},
   });
-  if(createError || !created.user) return json({error:'Akun gagal dibuat. Email mungkin sudah digunakan atau kata sandi tidak memenuhi pengaturan proyek.'},400);
+  if(createError || !created.user) {
+    if(['email_exists','user_already_exists'].includes(createError?.code || '')) return json({error:'Email ini sudah digunakan. Masukkan email lain untuk akun murid/guru yang baru.'},409);
+    if(createError?.code==='weak_password' || /password/i.test(createError?.message || '')) {
+      const minimum=createError?.message.match(/at least (\d+) characters/i)?.[1];
+      return json({error:minimum?`Kata sandi minimal ${minimum} karakter sesuai pengaturan akun sekolah.`:'Kata sandi belum memenuhi pengaturan akun sekolah. Coba kata sandi lain atau minta admin memeriksa aturan sandi di Supabase.'},400);
+    }
+    return json({error:'Akun gagal dibuat oleh layanan autentikasi. Periksa pemasangan profil akun dan log create-account di Supabase.'},400);
+  }
   try {
     // Profil awal selalu murid. Role guru hanya diset setelah otorisasi di atas.
     if(role==='guru') { const {error}=await admin.from('profiles').update({role:'guru'}).eq('id',created.user.id);if(error)throw error; }
