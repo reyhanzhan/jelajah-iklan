@@ -28,6 +28,11 @@ export async function dashboard() {
 export async function createClass(user, name) {
   return checked(await client().from('classes').insert({name,teacher_id:user.id}));
 }
+export async function manageClass(values) {
+  const result=await client().rpc('manage_class',values);
+  if(result.error?.code==='PGRST202') throw new Error('Fitur kelas belum terpasang. Jalankan account-management.sql di SQL Editor Supabase.');
+  return checked(result);
+}
 export async function createAccount(user, values) {
   const result = await client().functions.invoke('create-account', {body:values});
   if (result.error) {

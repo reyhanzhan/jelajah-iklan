@@ -16,7 +16,7 @@ export const db={auth:{
 export async function profileFor(){if(state.profileFailure)throw new Error('Missing profile');return {id:'student',full_name:'Akun Uji',role:'murid'};}
 export const loginEmail=value=>({admin:'admin@jelajah-iklan.test',guru:'guru@jelajah-iklan.test',siswa:'siswa@jelajah-iklan.test'}[value.trim().toLowerCase()]||value.trim().toLowerCase());
 export const dashboard=async()=>({classes:[],profiles:[],memberships:[],attempts:[]});
-export const createClass=()=>{},createAccount=()=>{},changeRole=()=>{},saveAttempt=()=>{};
+export const manageClass=()=>{},createClass=()=>{},createAccount=()=>{},changeRole=()=>{},saveAttempt=()=>{};
 `;
 const bundled=await build({entryPoints:['src/portal.js'],bundle:true,write:false,format:'esm',loader:{'.css':'empty'},plugins:[{name:'auth-test-adapter',setup(b){b.onResolve({filter:/^\.\/data\.js$/},()=>({path:'data',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:dataStub,loader:'js'}));}}]});
 async function setup(state={},source=bundled.outputFiles[0].text){

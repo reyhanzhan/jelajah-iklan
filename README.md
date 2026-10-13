@@ -118,3 +118,17 @@ Referensi resmi: [Vite di Vercel](https://vercel.com/docs/frameworks/frontend/vi
 Nama menu dan laporan disesuaikan menjadi Materi, Pilah Iklan, Game, dan Tantangan Pintar. Identitas kegiatan dalam database tetap sama sehingga hasil lama tetap terbaca. Pembaruan ini tidak memerlukan migrasi database: nilai Pilah Iklan memakai total 20, sedangkan analisis setiap poster tetap 3 pertanyaan. Kelima poster muncul dalam urutan acak tanpa pengulangan sampai satu putaran selesai.
 
 Pilah Iklan menjelaskan jawaban benar/salah dengan jenis iklan, alasan, dan kutipan pesan iklannya. Nilai akhir memakai skala 0–100: jumlah benar dibagi 20 dikali 100 (5 poin per jawaban benar). Ringkasan menampilkan nilai, jumlah benar/salah, dan perhitungannya. Database tetap menyimpan jumlah benar dan total seperti sebelumnya, tanpa perubahan schema.
+
+## Edit/hapus akun dan kelas, serta email murid
+
+Untuk memperbarui instalasi yang sudah berjalan:
+
+1. Jalankan seluruh `supabase/account-management.sql` di Supabase SQL Editor. Aman dijalankan ulang. Skrip ini menambahkan email profil, sinkronisasi email/nama dari Auth, dan fungsi edit/hapus kelas.
+2. Buka Edge Functions → `create-account` → Code. Ganti dengan seluruh isi terbaru `supabase/functions/create-account/index.ts`, lalu deploy kembali dengan nama **create-account**. Fungsi yang sama kini melayani tambah, edit, dan hapus akun.
+3. Setelah deployment Vercel selesai, muat ulang website. Tombol edit/hapus tersedia pada Kelas dan Kelola akun. Ikon mata tersedia di login, tambah/edit akun, dan ganti sandi.
+
+Admin dapat mengedit nama/email, mereset sandi, dan menghapus akun guru/murid. Guru hanya dapat mengelola murid yang seluruh kelasnya diampu guru tersebut; murid lintas pengajar dikelola admin. Email tampil pada daftar murid, Kelola akun, ruang murid, dan Pengaturan. Sandi lama tidak ditampilkan; kolom sandi kosong saat edit berarti sandi tidak berubah.
+
+Hapus kelas hanya menghapus kelas dan keanggotaannya; akun dan nilai tetap tersimpan. Hapus akun menghapus akun, keanggotaan, nilai, dan jawaban esainya secara permanen setelah konfirmasi. Akun sendiri/admin dilindungi dari penghapusan. Sebelum menghapus guru yang masih mengajar, admin mengganti pengajar melalui Edit kelas. Akun pemilik berkas Storage mungkin perlu dibereskan kepemilikan berkasnya di Supabase terlebih dahulu.
+
+Push ke GitHub/Vercel **tidak** menjalankan SQL atau men-deploy Edge Function Supabase secara otomatis.

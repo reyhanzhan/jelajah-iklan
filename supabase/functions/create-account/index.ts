@@ -21,6 +21,41 @@ Deno.serve(async (request: Request) => {
   let payload;
   try { payload=await request.json(); } catch { return json({error:'Data tidak valid.'},400); }
   if (!payload || typeof payload!=='object' || Array.isArray(payload)) return json({error:'Data tidak valid.'},400);
+  const action=payload.action ?? 'create';
+  if (!['create','update','delete'].includes(action)) return json({error:'Tindakan tidak valid.'},400);
+  if (action!=='create') {
+    if (typeof payload.id!=='string' || !/^[0-9a-f-]{36}$/i.test(payload.id)) return json({error:'ID akun tidak valid.'},400);
+    const {data:target,error:targetError}=await admin.from('profiles').select('id,role,email').eq('id',payload.id).single();
+    if(targetError || !target) return json({error:'Profil belum tersedia. Pastikan SQL account-management.sql sudah dijalankan.'},400);
+    if(actor.role==='guru') {
+      if(target.role!=='murid') return json({error:'Guru hanya dapat mengelola akun murid.'},403);
+      const {data:memberships,error}=await admin.from('memberships').select('classes!inner(teacher_id)').eq('student_id',target.id);
+      if(error) return json({error:'Keanggotaan kelas belum dapat diperiksa.'},500);
+      // Perubahan akun berlaku untuk semua kelas; murid lintas pengajar dikelola admin.
+      if(!memberships?.length || memberships.some((m:any)=>m.classes.teacher_id!==user.id)) return json({error:'Akun ini berada di luar kelas Anda atau memiliki pengajar lain. Minta admin mengelolanya.'},403);
+    }
+    if(action==='delete') {
+      if(target.id===user.id || target.role==='admin') return json({error:'Akun sendiri dan akun admin tidak dapat dihapus.'},403);
+      const {data:classes,error}=await admin.from('classes').select('id').eq('teacher_id',target.id);
+      if(error) return json({error:'Kelas pengajar belum dapat diperiksa.'},500);
+      if(classes?.length) return json({error:'Pindahkan pengajar melalui Edit kelas sebelum menghapus akun guru ini.'},409);
+      const {error:deleteError}=await admin.auth.admin.deleteUser(target.id);
+      if(deleteError) return json({error:'Akun gagal dihapus. Periksa data terkait atau kepemilikan berkas di Supabase.'},400);
+      return json({id:target.id});
+    }
+    const {full_name,email,password}=payload;
+    if(typeof full_name!=='string' || !full_name.trim() || full_name.trim().length>100 || typeof email!=='string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || (password!==undefined && (typeof password!=='string' || password.length>128))) return json({error:'Periksa nama, email, dan kata sandi (maksimal 128 karakter).'},400);
+    // Trigger SQL menyinkronkan nama/email dalam transaksi perubahan Auth yang sama.
+    const {error:updateError}=await admin.auth.admin.updateUserById(target.id,{
+      email:email.trim().toLowerCase(),email_confirm:true,user_metadata:{full_name:full_name.trim()},...(password?{password}:{})
+    });
+    if(updateError) {
+      if(['email_exists','user_already_exists'].includes(updateError.code || '')) return json({error:'Email ini sudah digunakan akun lain.'},409);
+      if(updateError.code==='weak_password' || /password/i.test(updateError.message)) return json({error:'Kata sandi belum memenuhi aturan sandi Supabase. '+updateError.message},400);
+      return json({error:'Perubahan akun gagal. Periksa log create-account di Supabase.'},400);
+    }
+    return json({id:target.id});
+  }
   const {full_name,email,password,role,class_id}=payload;
   if (typeof full_name!=='string' || !full_name.trim() || full_name.trim().length>100 || typeof email!=='string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password!=='string' || !password.length || password.length>128 || !['murid','guru'].includes(role)) return json({error:'Lengkapi nama, email, role, dan kata sandi (maksimal 128 karakter).'},400);
   if (role==='guru' && actor.role!=='admin') return json({error:'Hanya admin dapat membuat akun guru.'},403);

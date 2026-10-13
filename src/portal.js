@@ -2,7 +2,7 @@ import { loadContent, resetContent, saveEssay } from './content-data.js';
 import { drawContentEditor, drawEssayResults } from './content-editor.js';
 import './portal.css';
 import { Music } from './music.js';
-import { db, configured, loginEmail, profileFor, dashboard, createClass, createAccount, changeRole, saveAttempt } from './data.js';
+import { db, configured, loginEmail, profileFor, dashboard, createClass, manageClass, createAccount, changeRole, saveAttempt } from './data.js';
 
 const music = new Music();
 const main = document.getElementById('main');
@@ -17,12 +17,51 @@ window.canAccessLearning = () => !!user;
 
 function notify(message) { window.toast(message); }
 function message(error) { return error?.message || 'Terjadi kendala. Silakan coba lagi.'; }
+function passwordToggles(container) {
+  container.querySelectorAll('input[type="password"]').forEach(input=>{
+    let field=input.closest('.password-field');
+    if(!field){field=document.createElement('div');field.className='password-field';input.replaceWith(field);field.append(input);}
+    let button=field.querySelector('button');
+    if(!button){button=document.createElement('button');button.type='button';field.append(button);}
+    const draw=()=>{
+      const visible=input.type==='text';
+      button.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');
+      button.setAttribute('aria-pressed',String(visible));
+      button.innerHTML=`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>${visible?'<path d="M3 3l18 18"/>':''}</svg>`;
+    };
+    button.onclick=()=>{input.type=input.type==='password'?'text':'password';draw();};draw();
+  });
+}
+function accountActions(profile) {
+  return `<div class="manage-actions"><button class="secondary" data-edit-account="${escape(profile.id)}">Edit</button>${profile.id!==user.id && profile.role!=='admin'?`<button class="secondary danger" data-delete-account="${escape(profile.id)}">Hapus</button>`:''}</div>`;
+}
+function bindAccountActions() {
+  main.querySelectorAll('[data-edit-account]').forEach(button=>button.onclick=()=>editAccount(data.profiles.find(p=>p.id===button.dataset.editAccount)));
+  main.querySelectorAll('[data-delete-account]').forEach(button=>button.onclick=()=>{
+    const profile=data.profiles.find(p=>p.id===button.dataset.deleteAccount);
+    confirmRemoval('Hapus akun',`Hapus akun ${profile.full_name} (${profile.email || 'email belum tersedia'})? Akun, keanggotaan kelas, nilai, dan jawaban esai akan dihapus permanen.`,()=>createAccount(user,{action:'delete',id:profile.id}));
+  });
+}
+function confirmRemoval(title, explanation, remove) {
+  const dialog=modal(title,`<form class="form-stack"><p>${escape(explanation)}</p><p class="form-error" role="alert"></p><div class="manage-actions"><button type="button" class="secondary" id="cancelRemoval">Batal</button><button type="submit" class="primary danger">Ya, hapus</button></div></form>`);
+  dialog.querySelector('#cancelRemoval').onclick=()=>dialog.close();
+  formSubmit(dialog,async()=>{await remove();dialog.close();notify('Berhasil dihapus.');await openDashboard();});
+}
+function editAccount(profile) {
+  const dialog=modal('Edit akun',`<form class="form-stack"><label>Nama lengkap<input name="full_name" value="${escape(profile.full_name)}" maxlength="100" required></label><label>Email akun<input name="email" type="email" value="${escape(profile.email || '')}" maxlength="254" required></label><label>Kata sandi baru (opsional)<input name="password" type="password" maxlength="128" autocomplete="new-password"></label><p class="muted">Kosongkan kata sandi jika tidak ingin menggantinya. Gunakan email baru saat masuk jika email diubah.</p><p class="form-error" role="alert"></p><button type="submit" class="primary">Simpan perubahan</button></form>`);
+  formSubmit(dialog,async values=>{
+    await createAccount(user,{...values,full_name:values.full_name.trim(),email:values.email.trim(),action:'update',id:profile.id});
+    if(profile.id===user.id)user=await profileFor(user.id);
+    dialog.close();notify('Akun berhasil diperbarui.');await openDashboard();
+  });
+}
 function modal(title, body) {
   root.querySelector('dialog')?.close();
   root.innerHTML = `<dialog class="modal" aria-labelledby="dialogTitle"><div class="modal-head"><h2 id="dialogTitle">${escape(title)}</h2><button type="button" aria-label="Tutup">×</button></div>${body}</dialog>`;
   const dialog = root.querySelector('dialog');
   dialog.querySelector('.modal-head button').onclick = () => dialog.close();
   dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); } });
+  passwordToggles(dialog);
   dialog.showModal();
   return dialog;
 }
@@ -65,8 +104,7 @@ function renderLoginCover() {
       <p class="login-help">Akun disediakan oleh guru atau admin sekolah.<br>Belum punya akun atau lupa sandi? Hubungi gurumu.</p><div class="cover-role-labels"><span>Admin</span><span>Guru</span><span>Murid</span></div>
     </section>
   </section>`;
-  const toggle=main.querySelector('#togglePassword'),password=main.querySelector('#loginPassword');
-  toggle.onclick=()=>{const visible=password.type==='password';password.type=visible?'text':'password';toggle.textContent=visible?'Sembunyikan':'Lihat';toggle.setAttribute('aria-label',visible?'Sembunyikan kata sandi':'Tampilkan kata sandi');toggle.setAttribute('aria-pressed',String(visible));};
+  passwordToggles(main);
   if(configured){
     formSubmit(main,async values=>{
       const result=await db.auth.signInWithPassword({email:loginEmail(values.email),password:values.password});
@@ -92,7 +130,7 @@ function login() {
 }
 
 function settings() {
-  const dialog = modal('Pengaturan', `<div class="setting-row"><div><b>Musik latar</b><small>Teman ringan saat belajar.</small></div><input id="musicToggle" class="switch" type="checkbox" role="switch" aria-label="Musik latar" ${music.enabled?'checked':''}></div><div class="setting-row"><div><b>Volume musik</b><small id="volumeValue">${Math.round(music.volume*100)}%</small></div><input class="volume" id="volume" type="range" min="0" max="100" value="${Math.round(music.volume*100)}" aria-label="Volume musik"></div><p class="muted">Pengaturan musik tersimpan di perangkat ini. Musik dimulai setelah kamu berinteraksi dengan halaman.</p><p class="form-error" role="alert" id="musicError"></p>${user?`<div class="setting-row"><div><b>${escape(user.full_name)}</b><small>${roles[user.role]}</small></div><button class="secondary" id="logout">Keluar</button></div>${configured?'<button class="secondary full" id="changePassword" style="margin-top:16px">Ganti kata sandi</button>':''}`:'<button class="primary full" id="settingsLogin">Masuk ke akun</button>'}`);
+  const dialog = modal('Pengaturan', `<div class="setting-row"><div><b>Musik latar</b><small>Teman ringan saat belajar.</small></div><input id="musicToggle" class="switch" type="checkbox" role="switch" aria-label="Musik latar" ${music.enabled?'checked':''}></div><div class="setting-row"><div><b>Volume musik</b><small id="volumeValue">${Math.round(music.volume*100)}%</small></div><input class="volume" id="volume" type="range" min="0" max="100" value="${Math.round(music.volume*100)}" aria-label="Volume musik"></div><p class="muted">Pengaturan musik tersimpan di perangkat ini. Musik dimulai setelah kamu berinteraksi dengan halaman.</p><p class="form-error" role="alert" id="musicError"></p>${user?`<div class="setting-row"><div><b>${escape(user.full_name)}</b><small>${roles[user.role]}</small><small>${escape(user.email || '')}</small></div><button class="secondary" id="logout">Keluar</button></div>${configured?'<button class="secondary full" id="changePassword" style="margin-top:16px">Ganti kata sandi</button>':''}`:'<button class="primary full" id="settingsLogin">Masuk ke akun</button>'}`);
   dialog.querySelector('#musicToggle').onchange = async event => {
     try { await music.setEnabled(event.target.checked); }
     catch (error) { dialog.querySelector('#musicError').textContent = message(error); event.target.checked = false; await music.setEnabled(false); }
@@ -139,7 +177,7 @@ function drawDashboard() {
   if ((currentTab === 'akun' && user.role !== 'admin') || (['konten','esai'].includes(currentTab) && user.role === 'murid')) currentTab = 'kelas';
   const quizzes = data.attempts.filter(a=>a.activity==='soal');
   const average = quizzes.length ? `${Math.round(quizzes.reduce((sum,a)=>sum+a.correct/a.total*100,0)/quizzes.length)}%` : '—';
-  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p></div><img src="/mascot.svg" alt=""></div><div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(staff?[['konten','Kelola konten'],['esai','Jawaban esai']]:[]),...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
+  main.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Ruang ${roles[user.role]}</p><h1>Halo, ${escape(user.full_name)}!</h1><p class="muted">${staff?'Temani setiap langkah petualangan belajar.':'Siap melanjutkan petualangan iklanmu?'}</p><p class="account-email">${escape(user.email || '')}</p></div><img src="/mascot.svg" alt=""></div><div class="stats-grid"><div class="stat"><b>${data.classes.length}</b><span>Kelas${staff?' dikelola':' diikuti'}</span></div><div class="stat"><b>${staff?data.profiles.filter(p=>p.role==='murid').length:data.attempts.length}</b><span>${staff?'Murid':'Aktivitas selesai'}</span></div><div class="stat"><b>${average}</b><span>Rata-rata soal</span></div></div><button class="primary full" id="startLearning">${staff?'Buka kegiatan belajar':'Ayo, lanjut belajar!'} →</button><nav class="portal-tabs" aria-label="Ruang belajar">${[['kelas','Kelas'],['hasil','Hasil belajar'],...(staff?[['konten','Kelola konten'],['esai','Jawaban esai']]:[]),...(user.role==='admin'?[['akun','Kelola akun']]:[])].map(([id,label])=>`<button data-tab="${id}" ${currentTab===id?'aria-current="page"':''}>${label}</button>`).join('')}</nav><div id="dashboardContent"></div>`;
   document.getElementById('startLearning').onclick = () => window.go('home');
   main.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => {currentTab=button.dataset.tab;drawDashboard();});
   if (currentTab === 'kelas') drawClasses();
@@ -150,18 +188,29 @@ function drawDashboard() {
 }
 function empty(title, description) { return `<div class="empty-state"><img src="/material.svg" alt=""><b>${title}</b><p>${description}</p></div>`; }
 function drawClasses() {
-  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelas belajar</h2>${user.role!=='murid'?'<button class="secondary" id="newClass">+ Buat kelas</button>':''}</div>${data.classes.length?data.classes.map(c=>`<article class="class-card"><div><h3>${escape(c.name)}</h3><p>${data.memberships.filter(m=>m.class_id===c.id).length} murid${user.role==='admin'?` · ${escape(data.profiles.find(p=>p.id===c.teacher_id)?.full_name || 'Pengajar')}`:''}</p></div>${user.role!=='murid'?`<button class="secondary" data-add="${escape(c.id)}" style="min-height:38px;padding:8px 11px;font-size:12px">+ Murid</button>`:'<span class="role-badge">Terdaftar</span>'}</article>`).join(''):empty('Belum ada kelas',user.role==='murid'?'Guru akan mendaftarkan akunmu ke kelas.':'Buat kelas pertama, lalu tambahkan akun murid.')}<p class="muted">${user.role==='murid'?'Kamu tetap bisa membuka semua kegiatan belajar.':'Akun murid dibuat oleh guru atau admin, lalu langsung terdaftar di kelas yang dipilih.'}</p></section>${user.role!=='murid'?`<section class="section-card"><h2>Murid di kelasmu</h2>${studentTable()}</section>`:''}`;
-  document.getElementById('newClass')?.addEventListener('click', classDialog);
+  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelas belajar</h2>${user.role!=='murid'?'<button class="secondary" id="newClass">+ Buat kelas</button>':''}</div>${data.classes.length?data.classes.map(c=>`<article class="class-card"><div><h3>${escape(c.name)}</h3><p>${data.memberships.filter(m=>m.class_id===c.id).length} murid${user.role==='admin'?` · ${escape(data.profiles.find(p=>p.id===c.teacher_id)?.full_name || 'Pengajar')}`:''}</p></div>${user.role!=='murid'?`<div class="manage-actions"><button class="secondary" data-add="${escape(c.id)}">+ Murid</button><button class="secondary" data-edit-class="${escape(c.id)}">Edit</button><button class="secondary danger" data-delete-class="${escape(c.id)}">Hapus</button></div>`:'<span class="role-badge">Terdaftar</span>'}</article>`).join(''):empty('Belum ada kelas',user.role==='murid'?'Guru akan mendaftarkan akunmu ke kelas.':'Buat kelas pertama, lalu tambahkan akun murid.')}<p class="muted">${user.role==='murid'?'Kamu tetap bisa membuka semua kegiatan belajar.':'Akun murid dibuat oleh guru atau admin, lalu langsung terdaftar di kelas yang dipilih.'}</p></section>${user.role!=='murid'?`<section class="section-card"><h2>Murid di kelasmu</h2>${studentTable()}</section>`:''}`;
+  document.getElementById('newClass')?.addEventListener('click', ()=>classDialog());
+  main.querySelectorAll('[data-edit-class]').forEach(button=>button.onclick=()=>classDialog(data.classes.find(c=>c.id===button.dataset.editClass)));
+  main.querySelectorAll('[data-delete-class]').forEach(button=>button.onclick=()=>{
+    const classroom=data.classes.find(c=>c.id===button.dataset.deleteClass);
+    confirmRemoval('Hapus kelas', `Hapus kelas ${classroom.name}? Keanggotaan kelas akan dihapus. Akun murid dan nilai tetap tersimpan.`,()=>manageClass({action:'delete',target_id:classroom.id}));
+  });
+  bindAccountActions();
   main.querySelectorAll('[data-add]').forEach(button=>button.onclick=()=>accountDialog(button.dataset.add));
 }
 function studentTable() {
   const students=data.profiles.filter(p=>p.role==='murid');
   if (!students.length) return empty('Belum ada murid','Tambahkan murid lewat tombol di kelas.');
-  return `<div class="table-wrap"><table><thead><tr><th>Nama murid</th><th>Kelas</th><th>Aktivitas</th></tr></thead><tbody>${students.map(p=>`<tr><td>${escape(p.full_name)}</td><td>${data.memberships.filter(m=>m.student_id===p.id).map(m=>escape(data.classes.find(c=>c.id===m.class_id)?.name || '—')).join(', ') || '—'}</td><td>${data.attempts.filter(a=>a.student_id===p.id).length}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Nama murid</th><th>Email akun</th><th>Kelas</th><th>Aktivitas</th><th>Tindakan</th></tr></thead><tbody>${students.map(p=>`<tr><td>${escape(p.full_name)}</td><td>${escape(p.email || 'Belum tersedia')}</td><td>${data.memberships.filter(m=>m.student_id===p.id).map(m=>escape(data.classes.find(c=>c.id===m.class_id)?.name || '—')).join(', ') || '—'}</td><td>${data.attempts.filter(a=>a.student_id===p.id).length}</td><td>${accountActions(p)}</td></tr>`).join('')}</tbody></table></div>`;
 }
-function classDialog() {
-  const dialog = modal('Buat kelas belajar', '<form class="form-stack"><label>Nama kelas<input name="name" placeholder="Contoh: Kelas 5A" maxlength="80" required></label><p class="form-error" role="alert"></p><button class="primary" type="submit">Buat kelas</button></form>');
-  formSubmit(dialog, async values => { const name=values.name.trim(); if(!name)throw new Error('Nama kelas perlu diisi.'); await createClass(user,name); dialog.close(); notify('Kelas berhasil dibuat.'); openDashboard(); });
+function classDialog(classroom = null) {
+  const dialog = modal(classroom?'Edit kelas':'Buat kelas belajar', `<form class="form-stack"><label>Nama kelas<input name="name" value="${escape(classroom?.name || '')}" placeholder="Contoh: Kelas 5A" maxlength="80" required></label>${classroom && user.role==='admin'?`<label>Pengajar<select name="teacher_id">${data.profiles.filter(p=>p.role!=='murid').map(p=>`<option value="${escape(p.id)}" ${p.id===classroom.teacher_id?'selected':''}>${escape(p.full_name)}</option>`).join('')}</select></label>`:''}<p class="form-error" role="alert"></p><button class="primary" type="submit">${classroom?'Simpan perubahan':'Buat kelas'}</button></form>`);
+  formSubmit(dialog, async values => {
+    const name=values.name.trim(); if(!name)throw new Error('Nama kelas perlu diisi.');
+    if(classroom)await manageClass({action:'update',target_id:classroom.id,class_name:name,new_teacher_id:values.teacher_id || null});
+    else await createClass(user,name);
+    dialog.close(); notify(classroom?'Kelas berhasil diperbarui.':'Kelas berhasil dibuat.'); await openDashboard();
+  });
 }
 function accountDialog(classId = '') {
   if (!data.classes.length && user.role==='guru') { notify('Buat kelas terlebih dahulu.'); return; }
@@ -178,13 +227,14 @@ function accountDialog(classId = '') {
   });
 }
 function drawAccounts() {
-  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelola akun</h2><button class="secondary" id="newAccount">+ Buat akun</button></div><p class="muted">Role hanya dapat diubah admin. Role akun sendiri tidak dapat diubah.</p><input class="field" id="searchAccounts" type="search" placeholder="Cari nama pengguna…" aria-label="Cari pengguna"><div class="table-wrap"><table><thead><tr><th>Nama</th><th>Role</th></tr></thead><tbody id="accountRows"></tbody></table></div></section>`;
+  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Kelola akun</h2><button class="secondary" id="newAccount">+ Buat akun</button></div><p class="muted">Role hanya dapat diubah admin. Role akun sendiri tidak dapat diubah.</p><input class="field" id="searchAccounts" type="search" placeholder="Cari nama pengguna…" aria-label="Cari pengguna"><div class="table-wrap"><table><thead><tr><th>Nama</th><th>Email akun</th><th>Role</th><th>Tindakan</th></tr></thead><tbody id="accountRows"></tbody></table></div></section>`;
   const drawRows = (search='') => {
-    const users=data.profiles.filter(p=>p.full_name.toLowerCase().includes(search.toLowerCase()));
-    document.getElementById('accountRows').innerHTML = users.map(p=>`<tr><td>${escape(p.full_name)}${p.id===user.id?' (kamu)':''}</td><td><select aria-label="Role ${escape(p.full_name)}" data-role-user="${escape(p.id)}" ${p.id===user.id?'disabled':''}>${Object.entries(roles).map(([r,label])=>`<option value="${r}" ${r===p.role?'selected':''}>${label}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="2">Tidak ada pengguna yang cocok.</td></tr>';
+    const users=data.profiles.filter(p=>`${p.full_name} ${p.email || ''}`.toLowerCase().includes(search.toLowerCase()));
+    document.getElementById('accountRows').innerHTML = users.map(p=>`<tr><td>${escape(p.full_name)}${p.id===user.id?' (kamu)':''}</td><td>${escape(p.email || 'Belum tersedia')}</td><td><select aria-label="Role ${escape(p.full_name)}" data-role-user="${escape(p.id)}" ${p.id===user.id?'disabled':''}>${Object.entries(roles).map(([r,label])=>`<option value="${r}" ${r===p.role?'selected':''}>${label}</option>`).join('')}</select></td><td>${accountActions(p)}</td></tr>`).join('') || '<tr><td colspan="4">Tidak ada pengguna yang cocok.</td></tr>';
+    bindAccountActions();
     main.querySelectorAll('[data-role-user]').forEach(select=>select.onchange=async()=>{
       const profile=data.profiles.find(p=>p.id===select.dataset.roleUser); select.disabled=true;
-      try { await changeRole(user,profile.id,select.value); profile.role=select.value; notify('Role diperbarui.'); }
+      try { await changeRole(user,profile.id,select.value); profile.role=select.value; notify('Role diperbarui.'); drawRows(search); }
       catch(error){select.value=profile.role;notify(message(error));}
       finally{select.disabled=false;}
     });

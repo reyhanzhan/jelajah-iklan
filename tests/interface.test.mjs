@@ -19,6 +19,38 @@ async function setup(){
   return {dom,w,d:w.document};
 }
 const settle=()=>new Promise(resolve=>setTimeout(resolve,10));
+test('ikon mata, email murid, edit akun/kelas, serta konfirmasi hapus',async()=>{
+  const {dom,w,d}=await setup();
+  const submit=async()=>{d.querySelector('dialog form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();};
+  try{
+    assert(d.querySelector('#togglePassword svg'));
+    await enter(d,'guru');
+    assert.match(d.querySelector('table').textContent,/murid@fixture.test/);
+    d.querySelector('[data-add]').click();
+    const input=d.querySelector('dialog [name="password"]');input.value='secret';
+    const toggle=input.parentElement.querySelector('button');toggle.click();assert.equal(input.type,'text');assert.equal(toggle.getAttribute('aria-pressed'),'true');toggle.click();assert.equal(input.type,'password');
+    d.querySelector('.modal-head button').click();
+    d.querySelector('[data-edit-class]').click();d.querySelector('dialog [name="name"]').value='Kelas Baru';await submit();
+    assert.match(d.querySelector('main').textContent,/Kelas Baru/);
+    d.querySelector('[data-edit-account]').click();
+    d.querySelector('dialog [name="full_name"]').value='<img src=x> Nama baru';
+    d.querySelector('dialog [name="email"]').value='baru@fixture.test';await submit();
+    assert.match(d.querySelector('table').textContent,/baru@fixture.test/);assert.equal(d.querySelector('table img'),null);
+    d.querySelector('[data-delete-account]').click();d.querySelector('#cancelRemoval').click();assert.equal(w.serviceFixture.profiles.length,3);
+    d.querySelector('[data-delete-class]').click();await submit();
+    assert.equal(w.serviceFixture.classes.length,0);assert.equal(w.serviceFixture.profiles.length,3);
+    d.querySelector('[data-delete-account]').click();await submit();assert.equal(w.serviceFixture.profiles.length,2);
+  }finally{dom.window.close();}
+});
+test('email akun murid terlihat di ruang belajar dan pengaturan tanpa tombol pengelolaan',async()=>{
+  const {dom,d}=await setup();
+  try{
+    await enter(d,'murid');assert.match(d.querySelector('.account-email').textContent,/murid@fixture.test/);
+    assert.equal(d.querySelector('[data-edit-account],[data-delete-class]'),null);
+    d.querySelector('#settingsButton').click();assert.match(d.querySelector('dialog').textContent,/murid@fixture.test/);
+    d.querySelector('#changePassword').click();assert.equal(d.querySelectorAll('dialog .password-field svg').length,2);
+  }finally{dom.window.close();}
+});
 async function signIn(d,role){d.querySelector('[name="email"]').value=role+'@fixture.test';d.querySelector('[name="password"]').value='test-password-only';d.querySelector('#loginForm').dispatchEvent(new d.defaultView.Event('submit',{bubbles:true,cancelable:true}));await settle();}
 async function enter(d,role){await signIn(d,role);d.querySelector('#openDashboard').click();await settle();}
 
