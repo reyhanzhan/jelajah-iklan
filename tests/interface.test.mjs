@@ -73,6 +73,33 @@ test('hapus meminta konfirmasi dan pengaturan kartu custom digunakan murid',asyn
   }finally{dom.window.close();}
 });
 
+test('hasil belajar menampilkan batang benar/salah, nilai 0–100, filter dan urutan',async()=>{
+  const {dom,w,d}=await setup();
+  try{
+    await enter(d,'admin');
+    const state=w.serviceFixture;
+    state.profiles.find(p=>p.role==='murid').full_name='<img src=x> Murid';
+    state.attempts.push(
+      {student_id:'fixture-murid',activity:'game',correct:0,total:7,created_at:'2026-10-13T03:00:00Z'},
+      {student_id:'fixture-murid',activity:'soal',correct:5,total:6,created_at:'2026-10-12T03:00:00Z'},
+      {student_id:'fixture-murid',activity:'puzzle',correct:3,total:3,created_at:'2026-10-11T03:00:00Z'},
+      {student_id:'fixture-murid',activity:'materi',correct:7,total:7,created_at:'2026-10-10T03:00:00Z'});
+    d.querySelector('[data-tab="hasil"]').click();
+    assert.deepEqual([...d.querySelectorAll('.result-grade b')].map(el=>el.textContent),['100','83','0']);
+    const cards=d.querySelectorAll('.result-card');
+    assert.equal(cards[0].querySelector('.answer-wrong'),null);
+    assert.equal(cards[2].querySelector('.answer-correct'),null);
+    assert.equal(cards[1].querySelector('.answer-bar').getAttribute('aria-label'),'5 benar, 1 salah dari 6 soal');
+    assert.match(cards[3].textContent,/Selesai/);assert.equal(cards[3].querySelector('.answer-bar'),null);
+    assert.equal(d.querySelector('.result-person img'),null);
+    const sort=d.querySelector('#resultSort');sort.value='recent';sort.dispatchEvent(new w.Event('change'));
+    assert.equal(d.querySelector('.result-grade b').textContent,'0');
+    const filter=d.querySelector('#activityFilter');filter.value='soal';filter.dispatchEvent(new w.Event('change'));
+    assert.equal(d.querySelectorAll('.result-card').length,1);assert.equal(d.querySelector('.result-grade b').textContent,'83');
+    state.attempts.length=0;filter.dispatchEvent(new w.Event('change'));assert.match(d.querySelector('#resultRows').textContent,/Belum ada hasil/);
+  }finally{dom.window.close();}
+});
+
 test('edited content is escaped in lessons, ads and puzzle questions',async()=>{
   const {dom,w,d}=await setup();
   try{

@@ -193,12 +193,20 @@ function drawAccounts() {
   document.getElementById('newAccount').onclick=()=>accountDialog();
 }
 function drawResults() {
-  document.getElementById('dashboardContent').innerHTML = `<section class="section-card"><div class="section-title"><h2>Hasil belajar</h2><button class="secondary" id="refreshResults">↻ Perbarui</button></div><label class="muted" for="activityFilter">Kegiatan</label><select class="field" id="activityFilter"><option value="">Semua kegiatan</option>${Object.entries(activities).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><div id="resultRows"></div><p class="muted">Menampilkan hingga 500 hasil terbaru. Pilah Iklan, Game, dan materi adalah latihan. Nilai soal pada akun terhubung dihitung di server.</p></section>`;
-  const drawRows=(filter='')=>{
-    const rows=data.attempts.filter(a=>!filter||a.activity===filter);
-    document.getElementById('resultRows').innerHTML=rows.length?`<div class="table-wrap"><table><thead><tr>${user.role!=='murid'?'<th>Murid</th>':''}<th>Kegiatan</th><th>Hasil</th><th>Waktu</th></tr></thead><tbody>${rows.map(a=>`<tr>${user.role!=='murid'?`<td>${escape(data.profiles.find(p=>p.id===a.student_id)?.full_name||'Murid')}</td>`:''}<td>${activities[a.activity]}</td><td>${a.activity==='materi'?'Selesai':`<b>${Math.round(a.correct/a.total*100)}%</b> <small>(${a.correct}/${a.total})</small>`}</td><td>${new Date(a.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jakarta'})}</td></tr>`).join('')}</tbody></table></div>`:empty('Belum ada hasil belajar','Selesaikan kegiatan belajar untuk melihat hasilnya di sini.');
+  document.getElementById('dashboardContent').innerHTML = `<section class="section-card results-panel"><div class="section-title"><h2>Hasil belajar</h2><button class="secondary" id="refreshResults">↻ Perbarui</button></div><div class="result-filters"><label>Kegiatan<select class="field" id="activityFilter"><option value="">Semua kegiatan</option>${Object.entries(activities).filter(([key])=>key!=='esai').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label>Urutkan<select class="field" id="resultSort"><option value="score">Nilai tertinggi</option><option value="recent">Terbaru</option></select></label></div><div class="result-legend"><span><i class="legend-correct" aria-hidden="true"></i>Benar</span><span><i class="legend-wrong" aria-hidden="true"></i>Salah</span></div><div id="resultRows" aria-live="polite"></div><p class="muted">Satu baris untuk setiap pengerjaan, hingga 500 hasil terbaru. Nilai = jawaban benar ÷ jumlah soal × 100. Pilah Iklan dan Game adalah latihan; nilai pilihan ganda dihitung di server.</p></section>`;
+  const drawRows=()=>{
+    const filter=document.getElementById('activityFilter').value;
+    const score=a=>a.activity==='materi'?-1:a.correct/a.total*100;
+    const rows=data.attempts.filter(a=>!filter||a.activity===filter).sort((a,b)=>
+      (document.getElementById('resultSort').value==='score'?score(b)-score(a):0)||new Date(b.created_at)-new Date(a.created_at));
+    document.getElementById('resultRows').innerHTML=rows.length?`<div class="result-list">${rows.map(a=>{
+      const name=user.role==='murid'?user.full_name:data.profiles.find(p=>p.id===a.student_id)?.full_name||'Murid';
+      const percent=a.correct/a.total*100,wrong=a.total-a.correct;
+      return `<article class="result-card"><div class="result-person"><span class="avatar" aria-hidden="true">${escape(name.slice(0,1).toUpperCase())}</span><div><b>${escape(name)}</b><span>${activities[a.activity]}</span><time datetime="${escape(a.created_at)}">${new Date(a.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jakarta'})}</time></div></div>${a.activity==='materi'?'<div class="result-completion">✓ Semua halaman dipelajari</div><div class="result-grade complete">Selesai</div>':`<div class="result-answers"><div class="answer-bar" role="img" aria-label="${a.correct} benar, ${wrong} salah dari ${a.total} soal">${a.correct?`<span class="answer-correct" style="width:${percent}%">${a.correct}</span>`:''}${wrong?`<span class="answer-wrong" style="width:${100-percent}%">${wrong}</span>`:''}</div><small>${a.correct} benar · ${wrong} salah · ${a.total} soal</small></div><div class="result-grade"><small>Nilai</small><b>${Math.round(percent)}</b><small>/ 100</small></div>`}</article>`;
+    }).join('')}</div>`:empty('Belum ada hasil belajar','Selesaikan kegiatan belajar untuk melihat hasilnya di sini.');
   };
-  drawRows(); document.getElementById('activityFilter').onchange=e=>drawRows(e.target.value);
+  drawRows(); document.getElementById('activityFilter').onchange=drawRows;
+  document.getElementById('resultSort').onchange=drawRows;
   document.getElementById('refreshResults').onclick=openDashboard;
 }
 
