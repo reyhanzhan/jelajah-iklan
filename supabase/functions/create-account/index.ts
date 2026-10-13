@@ -74,7 +74,10 @@ Deno.serve(async (request: Request) => {
       const minimum=createError?.message.match(/at least (\d+) characters/i)?.[1];
       return json({error:minimum?`Kata sandi minimal ${minimum} karakter sesuai pengaturan akun sekolah.`:'Kata sandi belum memenuhi pengaturan akun sekolah. Coba kata sandi lain atau minta admin memeriksa aturan sandi di Supabase.'},400);
     }
-    return json({error:'Akun gagal dibuat oleh layanan autentikasi. Periksa pemasangan profil akun dan log create-account di Supabase.'},400);
+    const reason=String(createError?.message || 'Supabase Auth tidak memberi keterangan.').replace(/\s+/g,' ').slice(0,300);
+    console.error('[create-account] Auth createUser failed', {code:createError?.code,status:createError?.status,message:reason});
+    if(/database error/i.test(reason)) return json({error:`Supabase gagal membuat profil akun di database (${reason}). Periksa apakah schema.sql sudah membuat tabel profiles dan trigger on_auth_user_created.`},400);
+    return json({error:`Supabase Auth menolak pembuatan akun${createError?.code?` (${createError.code})`:''}: ${reason}`},400);
   }
   try {
     // Profil awal selalu murid. Role guru hanya diset setelah otorisasi di atas.
