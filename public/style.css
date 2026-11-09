@@ -92,3 +92,13 @@ main[data-page="soal"] .page-intro .eyebrow{color:#a84d66}
 .score-circle{background:#fff1bd;border-color:#ffc04e;color:#354073}
 .footer-note{color:#6a6a8e}
 @media(max-width:370px){.hero{min-height:216px}.hero-mascot{width:39%;right:-9px}.hero h1{font-size:27px}.hero p{font-size:12px}.page-intro img{width:92px;height:92px}.page-intro .page-title{font-size:23px}.menu-card{min-height:176px}.menu-icon{width:65px;height:62px}.menu-icon img{width:64px;height:59px}}
+
+.essay-card{display:grid;gap:12px;padding:16px;border:2px solid #e7d9f7;border-radius:18px;background:#fffdf7}
+.essay-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.essay-variant{display:inline-flex;align-items:center;background:#eee7ff;color:#5845ba;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.essay-image-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.essay-image-option{display:grid;gap:8px;justify-items:center;padding:10px;border:2px solid #ddd4f0;border-radius:14px;background:#fff;box-shadow:0 4px 12px rgba(52,54,107,.04);transition:transform .2s ease,border-color .2s ease,background .2s ease}
+.essay-image-option img{width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid #ece7f6}
+.essay-image-option.selected{border-color:#5c59ba;background:#f0ebff;transform:translateY(-1px)}
+.essay-image-option:disabled{opacity:.7;cursor:not-allowed}
+.essay-image-option:focus-visible{outline:3px solid #ffd76d;outline-offset:2px}
