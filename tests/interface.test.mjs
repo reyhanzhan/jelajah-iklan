@@ -101,13 +101,24 @@ test('admin dan guru menambah dan mengedit semua kategori; murid melihat konten 
         choose(kind);d.querySelector('[data-edit-content="0"]').click();fill('title','Judul baru '+kind);await save();
         assert.equal(w.getLearningContent()[kind][0].title,'Judul baru '+kind);
       }
-      choose('essays');d.querySelector('#addContent').click();fill('q','Tuliskan iklan buatanmu.');fill('guidance','Satu paragraf.');await save();
+      choose('essays');d.querySelector('#addContent').click();fill('q','Tuliskan iklan buatanmu.');fill('guidance','Satu paragraf.');
+      assert.equal(d.querySelectorAll('dialog .essay-option-editor').length,3);
+      fill('option0Title','Poster hemat air');fill('option0Image','/poster-hemat-air.jpeg');fill('option0Question','Apa ajakan pada poster?');fill('option0Keywords','hemat air, keran');
+      fill('option1Title','Poster roti');fill('option1Image','/poster-roti.svg');fill('option1Question','Apa promo pada iklan?');fill('option1Keywords','beli, gratis');
+      fill('option2Title','Poster vaksinasi');fill('option2Image','/poster-vaksinasi.jpeg');fill('option2Question','Layanan apa yang ditawarkan?');fill('option2Keywords','vaksinasi, harga');
+      await save();
+      assert.equal(w.getLearningContent().essays[0].imageOptions.length,3);
       d.querySelector('#settingsButton').click();d.querySelector('#logout').click();await settle();
       await enter(d,'murid');assert.equal(d.querySelector('[data-tab="konten"]'),null);
       w.go('materi');assert.match(d.querySelector('main').textContent,/Judul baru materials/);
-      w.go('esai');const answer=d.querySelector('textarea');answer.value='Beli buku kami!';answer.dispatchEvent(new w.Event('input',{bubbles:true}));
+      w.go('esai');const choices=d.querySelectorAll('.essay-image-option');assert.equal(choices.length,3);choices[0].click();
+      assert.equal(d.querySelectorAll('.essay-image-option:disabled').length,2);
+      assert.match(d.querySelector('label').textContent,/Apa ajakan pada poster/);
+      const answer=d.querySelector('#essayForm textarea');answer.value='Hemat air dan tutup keran.';answer.dispatchEvent(new w.Event('input',{bubbles:true}));
       d.querySelector('#essayForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
-      assert.equal(w.serviceFixture.essayAnswers[0].answer,'Beli buku kami!');assert.match(d.querySelector('.save-status').textContent,/tersimpan/);
+      assert.equal(w.serviceFixture.essayAnswers[0].answer,'Hemat air dan tutup keran.');
+      assert.deepEqual(Array.from(w.serviceFixture.essayAnswers[0].matchedKeywords),['hemat air','keran']);
+      assert.match(d.querySelector('.save-status').textContent,/tersimpan/);
     }finally{dom.window.close();}
   }
 });

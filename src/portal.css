@@ -2,6 +2,11 @@
 .account-strip{display:flex;align-items:center;gap:12px;background:#fffefa;border:2px solid #e8dff0;border-radius:18px;padding:13px 15px;margin-bottom:16px}
 .account-strip .account-copy{flex:1;min-width:0}.account-strip strong{display:block;font-size:14px;overflow-wrap:anywhere}.account-strip small{color:var(--muted);font-size:12px}.account-strip button{border:0;background:#e9e6ff;color:#44469b;border-radius:10px;padding:9px 13px;font-weight:700}
 .avatar{width:38px;height:38px;background:#ffedba;border-radius:12px;display:grid;place-items:center;font-weight:900;color:#5154ad;flex:none}
+.essay-options-editor,.essay-option-editor{display:grid;gap:12px;min-width:0;border:1px solid #ddd7eb;border-radius:14px;padding:14px}
+.essay-options-editor>legend,.essay-option-editor>legend{padding:0 6px;font-weight:700;color:var(--ink)}
+.essay-option-editor{background:#faf9ff}
+.essay-option-editor .image-upload{display:grid;gap:6px}
+.essay-option-editor .content-image-preview{max-height:180px}
 .modal{width:min(520px,calc(100% - 28px));max-height:90dvh;overflow:auto;border:2px solid #e1def2;border-radius:24px;padding:25px;background:var(--white);color:var(--ink);box-shadow:0 22px 80px #27305030}
 .modal::backdrop{background:#2227427a;backdrop-filter:blur(4px)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.modal-head h2{margin:0;font-size:22px}.modal-head button{border:0;background:#efebfa;border-radius:10px;width:34px;height:34px;color:#4d4d83;font-size:22px}
 .form-stack{display:grid;gap:15px}.form-stack label{display:grid;gap:6px;font-size:13px;font-weight:750}.form-stack input,.form-stack select,.field{width:100%;padding:12px;border:2px solid #ddd8ef;border-radius:12px;background:#fff;color:var(--ink);font:inherit;min-height:46px}.form-stack input:focus,.form-stack select:focus,.field:focus{outline:3px solid #ffcf6480;border-color:#7773c5}.form-stack .primary{margin-top:3px}

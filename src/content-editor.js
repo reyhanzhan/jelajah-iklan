@@ -3,9 +3,19 @@
 const names = {questions:'Pilihan Ganda',essays:'Esai',ads:'Pilah Iklan',materials:'Materi',puzzles:'Game Puzzle'};
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let selected = 'questions';
+function essayOptions(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 const fields = {
   questions:[['q','Pertanyaan','textarea'],['o0','Pilihan A'],['o1','Pilihan B'],['o2','Pilihan C'],['o3','Pilihan D'],['a','Jawaban benar','answer'],['explanation','Pembahasan','optional-textarea']],
-  essays:[['q','Pertanyaan esai','textarea'],['guidance','Petunjuk untuk murid','optional-textarea'],['keywords','Kata kunci (pisahkan dengan koma)','optional-textarea'],['imageOptions','Pilihan gambar (format JSON, opsional)','optional-textarea']],
+  essays:[['q','Pertanyaan esai','textarea'],['guidance','Petunjuk untuk murid','optional-textarea'],['keywords','Kata kunci umum (pisahkan dengan koma)','optional-textarea']],
   ads:[['title','Judul iklan'],['icon','Ikon / emoji'],['line','Isi iklan','textarea'],['type','Jenis iklan','category'],['reason','Alasan pengelompokan','textarea']],
   materials:[['title','Judul materi'],['body','Isi materi','textarea'],['image','Gambar pendukung (opsional)','optional-image']],
   puzzles:[['title','Nama poster'],['image','Gambar poster','image'],['type','Jenis iklan','category'],['reason','Alasan jenis iklan','textarea'],['aim','Tujuan iklan â€” jawaban benar'],['wrongAim','Tujuan iklan â€” jawaban pengecoh'],['thirdQuestion','Pertanyaan analisis tambahan','textarea'],['thirdCorrect','Jawaban benar pertanyaan tambahan'],['thirdWrong','Jawaban pengecoh pertanyaan tambahan'],['thirdExplanation','Pembahasan pertanyaan tambahan','textarea']],
@@ -52,6 +62,7 @@ export function drawContentEditor(container, {modal, notify}) {
     const kind=selected;
     const item=index===null?{icon:'ðŸ“£',type:'komersial',a:0}:bank[kind][index];
     const values={...item,...Object.fromEntries((item.o||[]).map((value,i)=>['o'+i,value]))};
+    if(kind==='essays')values.keywords=Array.isArray(values.keywords)?values.keywords.join(', '):values.keywords;
     const formFields=fields[kind].map(([name,label,type='text'])=>{
       const value=values[name]??'';
       const required=type.startsWith('optional')?'':'required';
@@ -62,12 +73,23 @@ export function drawContentEditor(container, {modal, notify}) {
       else input=`<input name="${name}" value="${escape(value)}" maxlength="${type.includes('image')?2000:1000}" ${required}>`;
       return `<label>${label}${input}</label>${type.includes('image')?'<label class="image-upload">Atau unggah gambar<input type="file" id="contentImageFile" accept="image/png,image/jpeg,image/webp"></label><small class="muted">JPG, PNG, atau WebP, maksimal 5 MB. Anda juga bisa menempelkan URL gambar HTTPS.</small><img id="contentImagePreview" class="content-image-preview" alt="Pratinjau gambar" hidden>':''}`;
     }).join('');
-    const dialog=modal(`${index===null?'Tambah':'Edit'} ${names[kind]}`,`<form class="form-stack content-form">${formFields}<p class="muted">Simpan untuk menerbitkan perubahan ke semua murid.</p><p class="form-error" role="alert"></p><div class="actions"><button type="button" class="secondary" id="cancelContent">Batal</button><button class="primary" type="submit">Simpan konten</button></div></form>`);
+    const savedOptions=kind==='essays'?essayOptions(values.imageOptions):[];
+    const optionFields=kind==='essays'?`<fieldset class="essay-options-editor"><legend>Pilihan gambar (opsional, maksimal 3)</legend><p class="muted">Isi gambar dan soal analisis untuk setiap pilihan. Murid hanya dapat memilih satu gambar.</p>${[0,1,2].map(i=>{
+      const option=savedOptions[i]||{};
+      const image=option.image||option.url||option.src||'';
+      return `<fieldset class="essay-option-editor"><legend>Gambar ${i+1}</legend><label>Nama gambar<input name="option${i}Title" value="${escape(option.title||'')}" maxlength="100" placeholder="Contoh: Poster hemat air"></label><label>Gambar<input name="option${i}Image" value="${escape(image)}" maxlength="2000" placeholder="Tempel alamat gambar HTTPS"></label><label class="image-upload">Atau unggah gambar<input type="file" name="option${i}File" accept="image/png,image/jpeg,image/webp"></label><img class="content-image-preview option-image-preview" data-option-preview="${i}" alt="Pratinjau gambar ${i+1}" ${image?'src="'+escape(image)+'"':'hidden'}><label>Soal analisis untuk gambar ini<textarea name="option${i}Question" rows="2" maxlength="4000" placeholder="Contoh: Apa ajakan pada poster ini?">${escape(option.question||'')}</textarea></label><label>Kata kunci untuk gambar ini<input name="option${i}Keywords" value="${escape(Array.isArray(option.keywords)?option.keywords.join(', '):option.keywords||'')}" maxlength="1000" placeholder="Contoh: hemat air, keran"></label><input type="hidden" name="option${i}Id" value="${escape(option.id||`essay-image-${i+1}`)}"></fieldset>`;
+    }).join('')}</fieldset>`:'';
+    const dialog=modal(`${index===null?'Tambah':'Edit'} ${names[kind]}`,`<form class="form-stack content-form">${formFields}${optionFields}<p class="muted">Simpan untuk menerbitkan perubahan ke semua murid.</p><p class="form-error" role="alert"></p><div class="actions"><button type="button" class="secondary" id="cancelContent">Batal</button><button class="primary" type="submit">Simpan konten</button></div></form>`);
     const form=dialog.querySelector('form'),error=dialog.querySelector('.form-error'),submit=form.querySelector('[type="submit"]');
     dialog.querySelector('#cancelContent').onclick=()=>dialog.close();
     const imageField=form.querySelector('[name="image"]'),upload=form.querySelector('#contentImageFile');
     const preview=()=>{const img=form.querySelector('#contentImagePreview');img.hidden=!imageField.value;if(imageField.value)img.src=imageField.value;};
     if(imageField){preview();imageField.onchange=preview;}
+    if(kind==='essays')for(let i=0;i<3;i++){
+      const imageInput=form.elements[`option${i}Image`],fileInput=form.elements[`option${i}File`],imagePreview=form.querySelector(`[data-option-preview="${i}"]`);
+      imageInput.oninput=()=>{imagePreview.hidden=!imageInput.value;if(imageInput.value)imagePreview.src=imageInput.value;};
+      fileInput.onchange=()=>{const file=fileInput.files[0];if(!file)return;imagePreview.src=URL.createObjectURL(file);imagePreview.hidden=false;};
+    }
     if(upload)upload.onchange=async()=>{
       if(!upload.files[0])return;
       submit.disabled=true;upload.disabled=true;error.textContent='';
@@ -82,10 +104,21 @@ export function drawContentEditor(container, {modal, notify}) {
         if(kind==='questions'){updated.o=[0,1,2,3].map(i=>updated['o'+i]);for(let i=0;i<4;i++)delete updated['o'+i];updated.a=Number(updated.a);}
         if(kind==='essays'){
           updated.keywords = String(updated.keywords || '').split(',').map(item=>item.trim()).filter(Boolean);
-          if(updated.imageOptions && String(updated.imageOptions).trim()){
-            try{updated.imageOptions = JSON.parse(String(updated.imageOptions));}
-            catch{throw new Error('Format pilihan gambar harus JSON valid. Contoh: [{"id":"poster-a","title":"Poster A","image":"/poster.svg","question":"Apa tujuan iklan ini?"}]');}
-          } else {delete updated.imageOptions;}
+          const imageOptions=[];
+          for(let i=0;i<3;i++){
+            let image=String(updated[`option${i}Image`]||'');
+            const file=form.elements[`option${i}File`].files[0];
+            if(file)image=await uploadContentImage(file);
+            const title=String(updated[`option${i}Title`]||'');
+            const question=String(updated[`option${i}Question`]||'');
+            const keywords=String(updated[`option${i}Keywords`]||'').split(',').map(value=>value.trim()).filter(Boolean);
+            const configured=Boolean(title||image||question||keywords.length||file);
+            if(configured && (!title||!image||!question))throw new Error(`Lengkapi nama, gambar, dan soal analisis pada Gambar ${i+1}, atau kosongkan seluruh bagiannya.`);
+            if(configured)imageOptions.push({id:String(updated[`option${i}Id`]||`essay-image-${i+1}`),title,image,question,keywords});
+            for(const key of [`option${i}Title`,`option${i}Image`,`option${i}Question`,`option${i}Keywords`,`option${i}Id`,`option${i}File`])delete updated[key];
+          }
+          if(imageOptions.length)updated.imageOptions=imageOptions;
+          else delete updated.imageOptions;
         }
         await saveContentItem(kind,index,updated);
         dialog.close();notify('Konten berhasil disimpan.');
