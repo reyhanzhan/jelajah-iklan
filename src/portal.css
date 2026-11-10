@@ -26,7 +26,6 @@
 .challenge-grid .menu-card:nth-child(2){background:#e9e6ff;border-color:#c5bfff}
 .challenge-grid .menu-card b{font-size:clamp(16px,4vw,20px);line-height:1.25}
 .challenge-grid .menu-card>span:last-of-type{font-size:13px;color:var(--muted)}
-.challenge-grid .essay-icon{font-size:48px;color:#6860b2}
 .challenge-badge{display:inline-block;margin-top:auto;padding-top:13px;font-size:12px;font-weight:800;color:#98445c}
 .challenge-badge.upcoming{color:#62568c}
 main[data-page="tantangan"] .page-intro,main[data-page="esai"] .page-intro{background:linear-gradient(130deg,#ffe3e8,#ffdfc2);border-color:#ffb4be}

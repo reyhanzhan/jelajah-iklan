@@ -91,6 +91,7 @@ test('admin dan guru menambah dan mengedit semua kategori; murid melihat konten 
     const {dom,w,d}=await setup();
     try{
       await enter(d,role);d.querySelector('[data-tab="konten"]').click();
+      assert(!d.querySelector('main').textContent.includes('Â'));
       const choose=kind=>{const select=d.querySelector('#contentKind');select.value=kind;select.dispatchEvent(new w.Event('change'));};
       const fill=(name,value)=>{d.querySelector('dialog [name="'+name+'"]').value=value;};
       const save=async()=>{d.querySelector('dialog form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(d.querySelector('dialog').open,false);};
@@ -242,9 +243,13 @@ test('Tantangan Pintar bercabang ke pilihan ganda dan esai; tombol kembali mempe
   try{
     await enter(d,'murid');d.querySelector('#startLearning').click();
     assert.deepEqual([...d.querySelectorAll('.menu-card b')].map(el=>el.textContent),['Materi','Pilah Iklan','Game','Tantangan Pintar']);
+    assert.equal(d.querySelector('.hero .eyebrow').textContent,'Bahasa Indonesia');
+    assert(!d.querySelector('.hero .eyebrow').textContent.includes('Â'));
     d.querySelector('[onclick="go(\'tantangan\')"]').click();
+    assert.equal(d.querySelector('.challenge-grid .essay-icon img').getAttribute('src'),'essay.svg');
     d.querySelector('[onclick="go(\'esai\')"]').click();
     assert.match(d.querySelector('main').textContent,/Segera hadir/);
+    assert.equal(d.querySelector('.page-intro img').getAttribute('src'),'essay.svg');
     assert.equal(d.querySelectorAll('textarea').length,0);
     d.querySelector('#backButton').click();
     assert.equal(d.querySelector('main').dataset.page,'tantangan');

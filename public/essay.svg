@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 160" role="img" aria-label="Lembar esai dan pensil">
+<circle cx="90" cy="80" r="72" fill="#ffffff" opacity=".55"/>
+<path d="M37 24h78a12 12 0 0 1 12 12v91a12 12 0 0 1-12 12H45a12 12 0 0 1-12-12V32a8 8 0 0 1 8-8z" fill="#fffdfa" stroke="#5059b8" stroke-width="6"/>
+<path d="M53 54h48M53 72h54M53 90h38" stroke="#8ccfc7" stroke-width="7" stroke-linecap="round"/>
+<path d="m105 112 39-66 16 10-39 66-22 12z" fill="#ffc94d" stroke="#dd724e" stroke-width="4" stroke-linejoin="round"/>
+<path d="m144 46 7-12a8 8 0 0 1 11-3l4 3a8 8 0 0 1 2 11l-8 11z" fill="#f28a92" stroke="#dd724e" stroke-width="4" stroke-linejoin="round"/>
+<path d="m99 134 22-12-17-10z" fill="#584c55"/>
+<path d="m24 48 4-10 4 10 10 4-10 4-4 10-4-10-10-4z" fill="#ffca45"/>
+<circle cx="145" cy="128" r="7" fill="#79d7ba"/>
+</svg>
