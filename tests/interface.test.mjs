@@ -350,8 +350,12 @@ test('nilai Pilah Iklan 100, 95, 65, dan 0 sesuai jawaban; feedback menjelaskan 
         const selected=correct?type:(type==='komersial'?'nonkomersial':'komersial');
         d.querySelector(selected==='komersial'?'#commercial':'#noncommercial').click();
         const feedback=d.querySelector('#gameFeedback .feedback');
-        assert.match(feedback.textContent,correct?/Ya, jawabanmu benar!/:/Maaf, jawabanmu salah/);
+        assert.match(feedback.textContent,correct?/Ya, jawabanmu benar!/:/Jawabanmu belum tepat/);
         assert.match(feedback.textContent,/karena/);
+        assert.match(feedback.textContent,/Perhatikan pesannya: ".*"/);
+        assert.match(feedback.textContent,new RegExp(`Iklan ini termasuk ${type} karena`));
+        if(!correct)assert.match(feedback.textContent,new RegExp(`Jawaban yang benar adalah ${type}`));
+        assert.doesNotMatch(feedback.textContent,/â€|ðŸ|Ã/);
         assert(feedback.textContent.includes(adMessage));
         d.querySelector('#commercial').click(); // Disabled answers cannot score twice.
         d.querySelector('#gameFeedback .primary').click();

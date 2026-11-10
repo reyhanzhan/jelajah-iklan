@@ -18,7 +18,7 @@ const fields = {
   essays:[['q','Pertanyaan esai','textarea'],['guidance','Petunjuk untuk murid','optional-textarea'],['keywords','Kata kunci umum (pisahkan dengan koma)','optional-textarea']],
   ads:[['title','Judul iklan'],['icon','Ikon / emoji'],['line','Isi iklan','textarea'],['type','Jenis iklan','category'],['reason','Alasan pengelompokan','textarea']],
   materials:[['title','Judul materi'],['body','Isi materi','textarea'],['image','Gambar pendukung (opsional)','optional-image']],
-  puzzles:[['title','Nama poster'],['image','Gambar poster','image'],['type','Jenis iklan','category'],['reason','Alasan jenis iklan','textarea'],['aim','Tujuan iklan â€” jawaban benar'],['wrongAim','Tujuan iklan â€” jawaban pengecoh'],['thirdQuestion','Pertanyaan analisis tambahan','textarea'],['thirdCorrect','Jawaban benar pertanyaan tambahan'],['thirdWrong','Jawaban pengecoh pertanyaan tambahan'],['thirdExplanation','Pembahasan pertanyaan tambahan','textarea']],
+  puzzles:[['title','Nama poster'],['image','Gambar poster','image'],['type','Jenis iklan','category'],['reason','Alasan jenis iklan','textarea'],['aim','Tujuan iklan — jawaban benar'],['wrongAim','Tujuan iklan — jawaban pengecoh'],['thirdQuestion','Pertanyaan analisis tambahan','textarea'],['thirdCorrect','Jawaban benar pertanyaan tambahan'],['thirdWrong','Jawaban pengecoh pertanyaan tambahan'],['thirdExplanation','Pembahasan pertanyaan tambahan','textarea']],
 };
 export function drawContentEditor(container, {modal, notify}) {
   const bank = window.getLearningContent();
@@ -60,7 +60,7 @@ export function drawContentEditor(container, {modal, notify}) {
   }
   function edit(index) {
     const kind=selected;
-    const item=index===null?{icon:'ðŸ“£',type:'komersial',a:0}:bank[kind][index];
+    const item=index===null?{icon:'📣',type:'komersial',a:0}:bank[kind][index];
     const values={...item,...Object.fromEntries((item.o||[]).map((value,i)=>['o'+i,value]))};
     if(kind==='essays')values.keywords=Array.isArray(values.keywords)?values.keywords.join(', '):values.keywords;
     const formFields=fields[kind].map(([name,label,type='text'])=>{
@@ -129,7 +129,7 @@ export function drawContentEditor(container, {modal, notify}) {
   }
 }
 export async function drawEssayResults(container, profiles) {
-  container.innerHTML='<p role="status">Memuat jawaban esaiâ€¦</p>';
+  container.innerHTML='<p role="status">Memuat jawaban esai...</p>';
   try{
     const rows=await readEssays();
     if(!container.isConnected)return;
