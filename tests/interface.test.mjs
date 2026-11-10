@@ -184,7 +184,11 @@ test('edited content is escaped in lessons, ads and puzzle questions',async()=>{
     bank.ads.forEach(item=>item.icon='<img src=x onerror=alert(1)>');
     bank.puzzles.forEach(item=>item.thirdQuestion='<img src=x onerror=alert(1)>');
     w.applyLearningContent(bank,'test');w.go('materi');assert.equal(d.querySelector('main script'),null);assert.equal(d.querySelector('.page-title img'),null);
-    w.go('game');assert.equal(d.querySelector('.ad-icon img'),null);
+    assert.equal(d.querySelector('.lesson-nav .primary').textContent,'Berikutnya');
+    assert(!d.querySelector('.lesson-nav .primary').textContent.includes('†'));
+    w.go('game');assert.equal(d.querySelector('.ad-icon img'),null);d.querySelector('#commercial').click();
+    assert.equal(d.querySelector('#gameFeedback .primary').textContent,'Kartu berikutnya');
+    w.go('soal');assert.equal(d.querySelector('.actions .primary').textContent,'Berikutnya');
     w.go('puzzle');w.renderAnalysis();assert.equal(d.querySelector('.analysis-question img'),null);
   }finally{dom.window.close();}
 });
